@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace AshitaPlanning\LaravelErrorMonitor;
+namespace Apkk\LaravelErrorMonitor;
 
-use AshitaPlanning\LaravelErrorMonitor\Commands\AnalyzeErrorMonitorCommand;
-use AshitaPlanning\LaravelErrorMonitor\Commands\StatusErrorMonitorCommand;
-use AshitaPlanning\LaravelErrorMonitor\Contracts\ErrorEventRepository;
-use AshitaPlanning\LaravelErrorMonitor\Contracts\FingerprintGenerator;
-use AshitaPlanning\LaravelErrorMonitor\Contracts\LogNormalizer;
-use AshitaPlanning\LaravelErrorMonitor\Contracts\SensitiveDataMasker;
-use AshitaPlanning\LaravelErrorMonitor\Repositories\DatabaseErrorEventRepository;
-use AshitaPlanning\LaravelErrorMonitor\Services\DefaultLogNormalizer;
-use AshitaPlanning\LaravelErrorMonitor\Services\DefaultSensitiveDataMasker;
-use AshitaPlanning\LaravelErrorMonitor\Services\Sha256FingerprintGenerator;
+use Apkk\LaravelErrorMonitor\Commands\AnalyzeErrorMonitorCommand;
+use Apkk\LaravelErrorMonitor\Commands\StatusErrorMonitorCommand;
+use Apkk\LaravelErrorMonitor\Contracts\ErrorEventRepository;
+use Apkk\LaravelErrorMonitor\Contracts\FingerprintGenerator;
+use Apkk\LaravelErrorMonitor\Contracts\LogNormalizer;
+use Apkk\LaravelErrorMonitor\Contracts\SensitiveDataMasker;
+use Apkk\LaravelErrorMonitor\Repositories\DatabaseErrorEventRepository;
+use Apkk\LaravelErrorMonitor\Services\DefaultLogNormalizer;
+use Apkk\LaravelErrorMonitor\Services\DefaultSensitiveDataMasker;
+use Apkk\LaravelErrorMonitor\Services\Sha256FingerprintGenerator;
 use Illuminate\Support\ServiceProvider;
 
 final class ErrorMonitorServiceProvider extends ServiceProvider

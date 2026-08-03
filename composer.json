@@ -18,18 +18,18 @@
   },
   "autoload": {
     "psr-4": {
-      "AshitaPlanning\\LaravelErrorMonitor\\": "src/"
+      "Apkk\\LaravelErrorMonitor\\": "src/"
     }
   },
   "autoload-dev": {
     "psr-4": {
-      "AshitaPlanning\\LaravelErrorMonitor\\Tests\\": "tests/"
+      "Apkk\\LaravelErrorMonitor\\Tests\\": "tests/"
     }
   },
   "extra": {
     "laravel": {
       "providers": [
-        "AshitaPlanning\\LaravelErrorMonitor\\ErrorMonitorServiceProvider"
+        "Apkk\\LaravelErrorMonitor\\ErrorMonitorServiceProvider"
       ]
     }
   },

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace AshitaPlanning\LaravelErrorMonitor\Tests\Feature;
+namespace Apkk\LaravelErrorMonitor\Tests\Feature;
 
-use AshitaPlanning\LaravelErrorMonitor\Contracts\ErrorEventRepository;
-use AshitaPlanning\LaravelErrorMonitor\DTO\ErrorEventData;
-use AshitaPlanning\LaravelErrorMonitor\Tests\TestCase;
+use Apkk\LaravelErrorMonitor\Contracts\ErrorEventRepository;
+use Apkk\LaravelErrorMonitor\DTO\ErrorEventData;
+use Apkk\LaravelErrorMonitor\Tests\TestCase;
 use DateTimeImmutable;
 
 final class DatabaseErrorEventRepositoryTest extends TestCase

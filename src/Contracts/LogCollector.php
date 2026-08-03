@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace AshitaPlanning\LaravelErrorMonitor\Contracts;
+namespace Apkk\LaravelErrorMonitor\Contracts;
 
-use AshitaPlanning\LaravelErrorMonitor\DTO\LogFileData;
+use Apkk\LaravelErrorMonitor\DTO\LogFileData;
 
 interface LogCollector
 {

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace AshitaPlanning\LaravelErrorMonitor\Commands;
+namespace Apkk\LaravelErrorMonitor\Commands;
 
-use AshitaPlanning\LaravelErrorMonitor\Models\ErrorMonitorEvent;
+use Apkk\LaravelErrorMonitor\Models\ErrorMonitorEvent;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;

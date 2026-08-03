@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace AshitaPlanning\LaravelErrorMonitor\Tests\Feature;
+namespace Apkk\LaravelErrorMonitor\Tests\Feature;
 
-use AshitaPlanning\LaravelErrorMonitor\Contracts\ErrorEventRepository;
-use AshitaPlanning\LaravelErrorMonitor\Contracts\FingerprintGenerator;
-use AshitaPlanning\LaravelErrorMonitor\Contracts\LogNormalizer;
-use AshitaPlanning\LaravelErrorMonitor\Contracts\SensitiveDataMasker;
-use AshitaPlanning\LaravelErrorMonitor\ErrorMonitorServiceProvider;
-use AshitaPlanning\LaravelErrorMonitor\Tests\TestCase;
+use Apkk\LaravelErrorMonitor\Contracts\ErrorEventRepository;
+use Apkk\LaravelErrorMonitor\Contracts\FingerprintGenerator;
+use Apkk\LaravelErrorMonitor\Contracts\LogNormalizer;
+use Apkk\LaravelErrorMonitor\Contracts\SensitiveDataMasker;
+use Apkk\LaravelErrorMonitor\ErrorMonitorServiceProvider;
+use Apkk\LaravelErrorMonitor\Tests\TestCase;
 
 final class ServiceProviderTest extends TestCase
 {

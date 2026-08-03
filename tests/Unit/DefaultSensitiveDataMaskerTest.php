@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace AshitaPlanning\LaravelErrorMonitor\Tests\Unit;
+namespace Apkk\LaravelErrorMonitor\Tests\Unit;
 
-use AshitaPlanning\LaravelErrorMonitor\Services\DefaultSensitiveDataMasker;
-use AshitaPlanning\LaravelErrorMonitor\Tests\TestCase;
+use Apkk\LaravelErrorMonitor\Services\DefaultSensitiveDataMasker;
+use Apkk\LaravelErrorMonitor\Tests\TestCase;
 
 final class DefaultSensitiveDataMaskerTest extends TestCase
 {

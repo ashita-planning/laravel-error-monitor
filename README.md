@@ -11,7 +11,7 @@
 
 ```bash
 composer require ashita-planning/laravel-error-monitor
-php artisan vendor:publish --provider="AshitaPlanning\LaravelErrorMonitor\ErrorMonitorServiceProvider" --tag=error-monitor-config
+php artisan vendor:publish --provider="Apkk\LaravelErrorMonitor\ErrorMonitorServiceProvider" --tag=error-monitor-config
 php artisan migrate
 ```
 

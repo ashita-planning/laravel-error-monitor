@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace AshitaPlanning\LaravelErrorMonitor\Services;
+namespace Apkk\LaravelErrorMonitor\Services;
 
-use AshitaPlanning\LaravelErrorMonitor\Contracts\FingerprintGenerator;
-use AshitaPlanning\LaravelErrorMonitor\DTO\ErrorEventData;
-use AshitaPlanning\LaravelErrorMonitor\DTO\StackFrameData;
+use Apkk\LaravelErrorMonitor\Contracts\FingerprintGenerator;
+use Apkk\LaravelErrorMonitor\DTO\ErrorEventData;
+use Apkk\LaravelErrorMonitor\DTO\StackFrameData;
 
 final class Sha256FingerprintGenerator implements FingerprintGenerator
 {

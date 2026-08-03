@@ -4,6 +4,6 @@
 /.phpstan/
 /coverage/
 /.idea/
-/.DS_Store
+.DS_Store
 /.env
 *.log

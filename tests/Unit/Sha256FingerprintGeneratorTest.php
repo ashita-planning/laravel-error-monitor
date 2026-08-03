@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace AshitaPlanning\LaravelErrorMonitor\Tests\Unit;
+namespace Apkk\LaravelErrorMonitor\Tests\Unit;
 
-use AshitaPlanning\LaravelErrorMonitor\DTO\ErrorEventData;
-use AshitaPlanning\LaravelErrorMonitor\DTO\StackFrameData;
-use AshitaPlanning\LaravelErrorMonitor\Services\DefaultLogNormalizer;
-use AshitaPlanning\LaravelErrorMonitor\Services\Sha256FingerprintGenerator;
-use AshitaPlanning\LaravelErrorMonitor\Tests\TestCase;
+use Apkk\LaravelErrorMonitor\DTO\ErrorEventData;
+use Apkk\LaravelErrorMonitor\DTO\StackFrameData;
+use Apkk\LaravelErrorMonitor\Services\DefaultLogNormalizer;
+use Apkk\LaravelErrorMonitor\Services\Sha256FingerprintGenerator;
+use Apkk\LaravelErrorMonitor\Tests\TestCase;
 use DateTimeImmutable;
 
 final class Sha256FingerprintGeneratorTest extends TestCase

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace AshitaPlanning\LaravelErrorMonitor\Tests;
+namespace Apkk\LaravelErrorMonitor\Tests;
 
-use AshitaPlanning\LaravelErrorMonitor\ErrorMonitorServiceProvider;
+use Apkk\LaravelErrorMonitor\ErrorMonitorServiceProvider;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Orchestra\Testbench\TestCase as Orchestra;
 

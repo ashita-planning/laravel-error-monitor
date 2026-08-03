@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace AshitaPlanning\LaravelErrorMonitor\Services;
+namespace Apkk\LaravelErrorMonitor\Services;
 
-use AshitaPlanning\LaravelErrorMonitor\Contracts\SensitiveDataMasker;
+use Apkk\LaravelErrorMonitor\Contracts\SensitiveDataMasker;
 
 final class DefaultSensitiveDataMasker implements SensitiveDataMasker
 {

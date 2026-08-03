@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace AshitaPlanning\LaravelErrorMonitor\Tests\Unit;
+namespace Apkk\LaravelErrorMonitor\Tests\Unit;
 
-use AshitaPlanning\LaravelErrorMonitor\Services\DefaultLogNormalizer;
-use AshitaPlanning\LaravelErrorMonitor\Tests\TestCase;
+use Apkk\LaravelErrorMonitor\Services\DefaultLogNormalizer;
+use Apkk\LaravelErrorMonitor\Tests\TestCase;
 
 final class DefaultLogNormalizerTest extends TestCase
 {

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace AshitaPlanning\LaravelErrorMonitor\Services;
+namespace Apkk\LaravelErrorMonitor\Services;
 
-use AshitaPlanning\LaravelErrorMonitor\DTO\AnalysisResultData;
+use Apkk\LaravelErrorMonitor\DTO\AnalysisResultData;
 
 final class ErrorMonitorAnalyzer
 {

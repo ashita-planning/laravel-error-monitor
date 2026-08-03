@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace AshitaPlanning\LaravelErrorMonitor\Repositories;
+namespace Apkk\LaravelErrorMonitor\Repositories;
 
-use AshitaPlanning\LaravelErrorMonitor\Contracts\ErrorEventRepository;
-use AshitaPlanning\LaravelErrorMonitor\DTO\ErrorEventData;
-use AshitaPlanning\LaravelErrorMonitor\Models\ErrorMonitorEvent;
+use Apkk\LaravelErrorMonitor\Contracts\ErrorEventRepository;
+use Apkk\LaravelErrorMonitor\DTO\ErrorEventData;
+use Apkk\LaravelErrorMonitor\Models\ErrorMonitorEvent;
 use DateTimeImmutable;
 use DateTimeInterface;
 use DateTimeZone;

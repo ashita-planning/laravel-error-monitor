@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AshitaPlanning\LaravelErrorMonitor\DTO;
+namespace Apkk\LaravelErrorMonitor\DTO;
 
 final readonly class AnalysisResultData
 {

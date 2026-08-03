@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace AshitaPlanning\LaravelErrorMonitor\Contracts;
+namespace Apkk\LaravelErrorMonitor\Contracts;
 
-use AshitaPlanning\LaravelErrorMonitor\DTO\ErrorEventData;
-use AshitaPlanning\LaravelErrorMonitor\Models\ErrorMonitorEvent;
+use Apkk\LaravelErrorMonitor\DTO\ErrorEventData;
+use Apkk\LaravelErrorMonitor\Models\ErrorMonitorEvent;
 use DateTimeInterface;
 use Illuminate\Support\Collection;
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AshitaPlanning\LaravelErrorMonitor\Contracts;
+namespace Apkk\LaravelErrorMonitor\Contracts;
 
 interface SensitiveDataMasker
 {

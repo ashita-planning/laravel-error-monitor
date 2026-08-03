@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace AshitaPlanning\LaravelErrorMonitor\Commands;
+namespace Apkk\LaravelErrorMonitor\Commands;
 
-use AshitaPlanning\LaravelErrorMonitor\Services\ErrorMonitorAnalyzer;
+use Apkk\LaravelErrorMonitor\Services\ErrorMonitorAnalyzer;
 use Illuminate\Console\Command;
 
 final class AnalyzeErrorMonitorCommand extends Command

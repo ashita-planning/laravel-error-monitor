@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AshitaPlanning\LaravelErrorMonitor\Models;
+namespace Apkk\LaravelErrorMonitor\Models;
 
 use DateTimeImmutable;
 use Illuminate\Database\Eloquent\Model;
