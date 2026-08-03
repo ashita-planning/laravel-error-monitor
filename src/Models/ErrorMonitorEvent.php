@@ -12,6 +12,8 @@ use Illuminate\Database\Eloquent\Model;
  * @property DateTimeImmutable|null $first_occurred_at
  * @property DateTimeImmutable|null $last_occurred_at
  * @property int $occurrence_count
+ * @property array<string, mixed>|null $context
+ * @property array<string, mixed>|null $metadata
  */
 final class ErrorMonitorEvent extends Model
 {
@@ -30,6 +32,8 @@ final class ErrorMonitorEvent extends Model
             'occurrence_count' => 'integer',
             'line' => 'integer',
             'status_code' => 'integer',
+            'context' => 'array',
+            'metadata' => 'array',
         ];
     }
 }

@@ -1,7 +1,12 @@
 {
   "name": "ashita-planning/laravel-error-monitor",
   "description": "A Laravel package foundation for detecting, aggregating, and normalizing HTTP 500 errors.",
-  "keywords": ["laravel", "error-monitoring", "logs", "observability"],
+  "keywords": [
+    "laravel",
+    "error-monitoring",
+    "logs",
+    "observability"
+  ],
   "license": "MIT",
   "type": "library",
   "require": {
@@ -36,7 +41,13 @@
   "scripts": {
     "test": "phpunit",
     "analyse": "phpstan analyse --memory-limit=512M",
-    "format": "pint"
+    "format": "pint",
+    "format:test": "pint --test",
+    "check": [
+      "@format:test",
+      "@analyse",
+      "@test"
+    ]
   },
   "config": {
     "sort-packages": true,

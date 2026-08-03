@@ -27,6 +27,9 @@ abstract class TestCase extends Orchestra
             'prefix' => '',
             'foreign_key_constraints' => true,
         ]);
+        // Locks come from the array store so the command tests do not depend
+        // on the cache table of the host application.
+        $app['config']->set('cache.default', 'array');
         $app['config']->set('error-monitor.timezone', 'UTC');
     }
 

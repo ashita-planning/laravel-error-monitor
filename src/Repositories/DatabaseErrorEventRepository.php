@@ -95,17 +95,27 @@ final class DatabaseErrorEventRepository implements ErrorEventRepository
         $lastOccurredAt = $eventModel->last_occurred_at;
         $occurredAt = $event->occurredAt;
 
-        $eventModel->fill([
+        $attributes = [
             'occurrence_count' => $eventModel->occurrence_count + max(1, $event->occurrenceCount),
             'first_occurred_at' => $firstOccurredAt === null || $occurredAt < $firstOccurredAt ? $occurredAt : $firstOccurredAt,
             'last_occurred_at' => $lastOccurredAt === null || $occurredAt > $lastOccurredAt ? $occurredAt : $lastOccurredAt,
             'payload_hash' => $payloadHash,
-        ])->save();
+        ];
+
+        if ($event->context !== []) {
+            $attributes['context'] = $event->context;
+        }
+
+        if ($event->metadata !== []) {
+            $attributes['metadata'] = $event->metadata;
+        }
+
+        $eventModel->fill($attributes)->save();
 
         return $eventModel->refresh();
     }
 
-    /** @return array<string, int|string|DateTimeImmutable|null> */
+    /** @return array<string, mixed> */
     private function attributes(ErrorEventData $event, string $payloadHash): array
     {
         return [
@@ -125,6 +135,8 @@ final class DatabaseErrorEventRepository implements ErrorEventRepository
             'status_code' => $event->statusCode,
             'payload_hash' => $payloadHash,
             'status' => 'open',
+            'context' => $event->context === [] ? null : $event->context,
+            'metadata' => $event->metadata === [] ? null : $event->metadata,
         ];
     }
 

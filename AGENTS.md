@@ -19,7 +19,8 @@ This Laravel package supplies the foundation for safely detecting, normalizing, 
 - `src/Commands`: concise Artisan entry points.
 - `config`: published package configuration.
 - `database/migrations`: package-owned schema.
-- `tests`: synthetic unit and Laravel integration tests.
+- `tests`: synthetic unit and Laravel integration tests; `tests/Doubles` holds the fake log drivers used to exercise the pipeline.
+- `.github/workflows`: the quality gates, run on every push and pull request.
 
 ## Coding conventions
 
@@ -29,10 +30,21 @@ Use strict types, PHP 8.2 `readonly` DTOs where possible, PSR-4 namespaces, smal
 
 ```bash
 composer install
-composer test
-composer format -- --test
-composer analyse
+composer check          # format:test, analyse, test
+composer test           # PHPUnit only
+composer format         # Pint, writing
+composer format:test    # Pint, check only
+composer analyse        # PHPStan
 ```
+
+CI (`.github/workflows/ci.yml`) runs the same gates across PHP 8.2/8.3/8.4 and
+Laravel 10/11/12, then migrates and runs both Artisan commands inside a
+Testbench application. Combinations the framework does not support are left out
+of the matrix instead of being excluded afterwards.
+
+Coverage is not a target in itself, but masking, normalization, fingerprinting,
+duplicate protection, the Artisan commands (including their exit codes) and the
+service provider registration must stay covered.
 
 ## Backward compatibility
 
@@ -42,6 +54,18 @@ Contracts, DTO constructor parameters, config keys, migration identifiers, Artis
 
 Mask before persistence, display, export, or fingerprinting. Do not retain original sensitive values. Never add production logs, real IP addresses, emails, cookies, session IDs, CSRF tokens, API keys, or access tokens to fixtures or Git. Use clearly synthetic examples such as `example.invalid` and documentation IP ranges only.
 
+## Configuration
+
+Defaults live in `config/error-monitor.php` and nowhere else. Read them through
+`config('error-monitor....')` with the same default as the file, and add new keys
+with a default so a published, out-of-date config file keeps working.
+
 ## Deferred work
 
-Do not implement GitHub Issue/API integration or XServer-specific handling yet. Do not call any Codex API from this package. Future Apache and XServer collectors must implement the existing contracts without adding application-model dependencies.
+Do not implement GitHub Issue/API integration or XServer-specific handling yet.
+`Contracts\IssuePublisher` is a contract only - no implementation belongs in this
+package, and the `github` configuration section must stay unread by any HTTP
+call. Do not call any AI agent API (Codex, Claude, ...) from this package;
+that orchestration belongs in GitHub Actions. Future Apache and XServer
+collectors must implement the existing contracts without adding
+application-model dependencies.
