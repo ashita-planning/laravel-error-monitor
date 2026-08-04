@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Apkk\LaravelErrorMonitor\Services;
 
+use Apkk\LaravelErrorMonitor\Collectors\ServerLogSourceCollector;
 use Apkk\LaravelErrorMonitor\Contracts\ErrorEventRepository;
 use Apkk\LaravelErrorMonitor\Contracts\FingerprintGenerator;
 use Apkk\LaravelErrorMonitor\Contracts\LogCollector;
@@ -67,7 +68,7 @@ final class ErrorMonitorAnalyzer
         $skipped = 0;
         $stored = 0;
 
-        foreach ($this->collectors as $collector) {
+        foreach ($this->collectorsFor($window) as $collector) {
             foreach ($collector->collect() as $logFile) {
                 if ($source !== null && $logFile->source !== $source) {
                     continue;
@@ -193,6 +194,24 @@ final class ErrorMonitorAnalyzer
         }
 
         return $event->statusCode !== null && in_array($event->statusCode, $statuses, true);
+    }
+
+    /**
+     * Collectors bound to the period being analysed.
+     *
+     * Only the collector fronting external sources needs one: an adapter is
+     * asked for a specific day rather than for whatever it happens to hold.
+     *
+     * @return array<int, LogCollector>
+     */
+    private function collectorsFor(?AnalysisWindowData $window): array
+    {
+        return array_map(
+            static fn (LogCollector $collector): LogCollector => $collector instanceof ServerLogSourceCollector
+                ? $collector->withWindow($window)
+                : $collector,
+            $this->collectors,
+        );
     }
 
     /**

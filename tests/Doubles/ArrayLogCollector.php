@@ -14,7 +14,15 @@ use Apkk\LaravelErrorMonitor\DTO\LogFileData;
 final class ArrayLogCollector implements LogCollector
 {
     /** @param array<int, LogFileData> $files */
-    public function __construct(private readonly array $files = []) {}
+    public function __construct(
+        private readonly array $files = [],
+        private readonly string $source = 'tests',
+    ) {}
+
+    public function source(): string
+    {
+        return $this->source;
+    }
 
     public function collect(): iterable
     {

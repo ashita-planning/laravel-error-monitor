@@ -21,6 +21,7 @@ application-agnostic and performs no outbound HTTP call.
 | How the pipeline fits together | `src/Services/ErrorMonitorAnalyzer.php` |
 | How one daily run is orchestrated | `src/Services/DailyErrorMonitorRunner.php` |
 | Public API | `src/Contracts/`, `src/DTO/` |
+| How an external package supplies logs | `src/Contracts/ServerLogSource.php`, `src/Collectors/ServerLogSourceCollector.php` |
 | How a log file becomes an event | `src/Parsers/LaravelLogParser.php`, `src/Parsers/ApacheAccessLogParser.php`, `src/Parsers/ApacheErrorLogParser.php` |
 | How an Apache 5xx is tied to an exception | `src/Services/ApacheLaravelCorrelationService.php` |
 | How a server failure is categorised | `src/Support/ServerErrorClassifier.php` |
@@ -80,8 +81,14 @@ default -
 `error-monitor:run` (the daily command: every source, correlation, publishing
 hook, retention pruning, exit codes 0-5) and `error-monitor:status`.
 
-Not implemented: GitHub Issue publishing, AI agent integration and XServer
-collectors. Those belong in separate packages, not in this one.
+Also implemented: the `ServerLogSource` extension boundary
+(`Contracts/ServerLogSource` + `DTO/CollectedLogFileData` +
+`Services/LogSourceRegistry` + `Collectors/ServerLogSourceCollector`), which is
+how an adapter package supplies logs the core cannot reach.
+
+Not implemented: GitHub Issue publishing, AI agent integration and the XServer
+adapter itself. Those belong in separate packages, not in this one - see
+`AGENTS.md` for what may never enter the core.
 
 The HTTP status of a parsed event is never asserted blindly: parsers record
 `metadata.status_source` (`context` / `exception_class` / `assumed` /

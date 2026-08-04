@@ -7,6 +7,7 @@ namespace Apkk\LaravelErrorMonitor;
 use Apkk\LaravelErrorMonitor\Collectors\ApacheAccessLogCollector;
 use Apkk\LaravelErrorMonitor\Collectors\ApacheErrorLogCollector;
 use Apkk\LaravelErrorMonitor\Collectors\LaravelLogCollector;
+use Apkk\LaravelErrorMonitor\Collectors\ServerLogSourceCollector;
 use Apkk\LaravelErrorMonitor\Commands\AnalyzeErrorMonitorCommand;
 use Apkk\LaravelErrorMonitor\Commands\RunErrorMonitorCommand;
 use Apkk\LaravelErrorMonitor\Commands\StatusErrorMonitorCommand;
@@ -18,6 +19,7 @@ use Apkk\LaravelErrorMonitor\Contracts\LogCollector;
 use Apkk\LaravelErrorMonitor\Contracts\LogNormalizer;
 use Apkk\LaravelErrorMonitor\Contracts\LogParser;
 use Apkk\LaravelErrorMonitor\Contracts\SensitiveDataMasker;
+use Apkk\LaravelErrorMonitor\Contracts\ServerLogSource;
 use Apkk\LaravelErrorMonitor\Parsers\ApacheAccessLogParser;
 use Apkk\LaravelErrorMonitor\Parsers\ApacheErrorLogParser;
 use Apkk\LaravelErrorMonitor\Parsers\LaravelLogParser;
@@ -28,6 +30,7 @@ use Apkk\LaravelErrorMonitor\Services\DailyErrorMonitorRunner;
 use Apkk\LaravelErrorMonitor\Services\DefaultLogNormalizer;
 use Apkk\LaravelErrorMonitor\Services\DefaultSensitiveDataMasker;
 use Apkk\LaravelErrorMonitor\Services\ErrorMonitorAnalyzer;
+use Apkk\LaravelErrorMonitor\Services\LogSourceRegistry;
 use Apkk\LaravelErrorMonitor\Services\Sha256FingerprintGenerator;
 use Apkk\LaravelErrorMonitor\Support\ApplicationFrameDetector;
 use Apkk\LaravelErrorMonitor\Support\HttpStatusResolver;
@@ -53,6 +56,15 @@ final class ErrorMonitorServiceProvider extends ServiceProvider
     /** Container tag additional parsers are registered under. */
     public const PARSER_TAG = 'error-monitor.parsers';
 
+    /**
+     * Container tag external log sources are registered under.
+     *
+     * An adapter package tags its {@see ServerLogSource} here and needs nothing
+     * else; the core discovers it, and works exactly as before when none is
+     * installed.
+     */
+    public const SERVER_LOG_SOURCE_TAG = 'error-monitor.server-log-sources';
+
     private const CONFIG_PATH = __DIR__.'/../config/error-monitor.php';
 
     private const MIGRATIONS_PATH = __DIR__.'/../database/migrations';
@@ -64,6 +76,9 @@ final class ErrorMonitorServiceProvider extends ServiceProvider
         $this->registerLaravelLogDriver();
         $this->registerApacheAccessLogDriver();
         $this->registerApacheErrorLogDriver();
+        // Last, so the bundled drivers keep their order and an adapter only
+        // ever adds to the end of the list.
+        $this->registerServerLogSources();
 
         $this->app->singleton(LogNormalizer::class, DefaultLogNormalizer::class);
         $this->app->singleton(SensitiveDataMasker::class, DefaultSensitiveDataMasker::class);
@@ -121,6 +136,28 @@ final class ErrorMonitorServiceProvider extends ServiceProvider
                 StatusErrorMonitorCommand::class,
             ]);
         }
+    }
+
+    /**
+     * Bind the registry of external log sources and the collector fronting it.
+     *
+     * Both exist whether or not an adapter is installed: an empty registry
+     * simply yields no files, which is the normal state of a core-only install.
+     */
+    private function registerServerLogSources(): void
+    {
+        $this->app->singleton(LogSourceRegistry::class, function (Application $app): LogSourceRegistry {
+            return new LogSourceRegistry($this->tagged($app, self::SERVER_LOG_SOURCE_TAG, ServerLogSource::class));
+        });
+
+        $this->app->bind(
+            ServerLogSourceCollector::class,
+            static fn (Application $app): ServerLogSourceCollector => new ServerLogSourceCollector(
+                $app->make(LogSourceRegistry::class),
+            ),
+        );
+
+        $this->app->tag([ServerLogSourceCollector::class], self::COLLECTOR_TAG);
     }
 
     /**

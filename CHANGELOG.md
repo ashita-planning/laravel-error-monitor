@@ -80,6 +80,17 @@ project adheres to [Semantic Versioning](https://semver.org/).
   `metadata.correlation_method`, `correlation_confidence` and
   `correlation_candidates`. A 5xx with no counterpart is kept as its own event,
   which is the normal shape of a 502 or 503 that never reached PHP.
+- `Contracts\ServerLogSource`, `DTO\CollectedLogFileData`,
+  `Services\LogSourceRegistry` and `Collectors\ServerLogSourceCollector`: the
+  boundary an adapter package uses to supply logs the core cannot reach. An
+  adapter tags its source under
+  `ErrorMonitorServiceProvider::SERVER_LOG_SOURCE_TAG` and hands over readable
+  local paths; the core validates existence and readability, deduplicates by
+  `source + target_date + file_hash`, and reads the file with the parsers it
+  already has. A core-only installation is unaffected: the registry is simply
+  empty. Two sources may not share an id, and a source that throws is reported
+  as a warning rather than taking the run down.
+- `Support\LogSource`: the source keys the package knows by name.
 - `error-monitor:run`: the daily command. Resolves the period (defaulting to
   yesterday), reads Laravel, Apache access and Apache error logs in that order,
   correlates them, stores idempotently, hands failures to an `IssuePublisher`
@@ -152,6 +163,11 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `LogCollector` gained `source(): string`, so a run can say which collector
+  produced what. Files still carry the source a parser claims them by, so this
+  is descriptive rather than a routing key. Custom collectors must implement it.
+- `LogFileData` gained `targetDate`, `fileHash`, `compressed` and `metadata`,
+  all optional and only filled in for externally supplied files.
 - `LogParser` gained `supports(LogFileData): bool`. The analyzer now hands a
   file to the first parser claiming it instead of to the first registered one,
   which is what lets several log formats coexist. Custom parsers must implement

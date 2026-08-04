@@ -66,9 +66,22 @@ Do not implement GitHub Issue/API integration or XServer-specific handling yet.
 `Contracts\IssuePublisher` is a contract only - no implementation belongs in this
 package, and the `github` configuration section must stay unread by any HTTP
 call. Do not call any AI agent API (Codex, Claude, ...) from this package;
-that orchestration belongs in GitHub Actions. Future Apache and XServer
-collectors must implement the existing contracts without adding
-application-model dependencies.
+that orchestration belongs in GitHub Actions.
+
+Hosting-specific log retrieval stays out of this package. No XServer path
+convention, `server_id`/`domain` parsing, SSH or FTP client, or provider API
+call may be added to the core - an adapter package implements
+`Contracts\ServerLogSource` and hands over readable local paths through
+`DTO\CollectedLogFileData`. Path traversal checks, symlink handling, allowed
+directory rules, credentials, retries and rate limits are the adapter's
+responsibility, because only the adapter knows what "allowed" means in its
+environment. The core validates existence and readability, deduplicates by
+`source + target_date + file_hash`, and reads the file.
+
+Do not make adapters decompress: the parsers stream `.gz` themselves. Do not
+accept stream resources or factory closures into DTOs - they do not serialize
+and are awkward to test; add a dedicated contract if a path is ever genuinely
+impossible.
 
 A parser must report how it established the HTTP status of an event
 (`metadata.status_source`: `context`, `exception_class` or `assumed`, plus
