@@ -17,6 +17,11 @@ jobs:
     name: PHP ${{ matrix.php }} / Laravel ${{ matrix.laravel }}
     runs-on: ubuntu-latest
 
+    env:
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /tmp/error-monitor.sqlite
+      CACHE_STORE: database
+
     strategy:
       fail-fast: false
       matrix:
@@ -43,7 +48,7 @@ jobs:
           coverage: none
 
       - name: Validate composer.json
-        run: composer validate --strict --no-check-lock
+        run: composer validate --strict
 
       - name: Pin the framework version
         run: >
@@ -51,25 +56,37 @@ jobs:
           "laravel/framework:${{ matrix.laravel }}"
           "orchestra/testbench:${{ matrix.testbench }}"
 
+      # This job answers "does the code still work on Laravel 10/11/12", which
+      # requires installing framework releases that carry security advisories -
+      # Composer blocks those during resolution from 2.9 on. The bypass is set
+      # here only: it never reaches composer.json, so nothing weakens for anyone
+      # installing this package. The `security` job below keeps the real gate.
       - name: Install dependencies
         run: composer update --prefer-dist --no-interaction --no-progress
+        env:
+          COMPOSER_NO_BLOCKING: 1
 
       - name: Run the test suite
         run: composer test
 
+      # migrate, status and analyze are three separate PHP processes, so an
+      # in-memory SQLite would be gone before the second one starts. A file
+      # database is what makes the migration visible to the commands.
+      - name: Prepare the SQLite database
+        run: |
+          rm -f "${DB_DATABASE}"
+          touch "${DB_DATABASE}"
+
       - name: Migrate inside a Laravel application
         run: vendor/bin/testbench migrate --force
-        env:
-          DB_CONNECTION: sqlite
-          DB_DATABASE: ':memory:'
 
       - name: Run the Artisan commands
         run: |
           vendor/bin/testbench error-monitor:status
-          vendor/bin/testbench error-monitor:analyze --dry-run
-        env:
-          DB_CONNECTION: sqlite
-          DB_DATABASE: ':memory:'
+          # Exit code 4 means "the collectors ran and matched no log file",
+          # which is the healthy answer for an application that has never
+          # written one. Only a real failure (1, 2, 3) should fail the job.
+          vendor/bin/testbench error-monitor:analyze --dry-run || [ "$?" -eq 4 ]
 
   quality:
     name: Code style and static analysis
@@ -85,11 +102,37 @@ jobs:
           extensions: dom, curl, libxml, mbstring, zip, sqlite3, pdo_sqlite
           coverage: none
 
+      # No composer.lock is committed - a library resolves against whatever the
+      # host application allows, and the matrix above is what pins versions.
       - name: Install dependencies
-        run: composer install --prefer-dist --no-interaction --no-progress
+        run: composer update --prefer-dist --no-interaction --no-progress
 
       - name: Check the code style
         run: composer format:test
 
       - name: Run the static analysis
         run: composer analyse
+
+  security:
+    name: Current dependency security
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: dom, curl, libxml, mbstring, zip, sqlite3, pdo_sqlite
+          coverage: none
+
+      # Deliberately no COMPOSER_NO_BLOCKING here: this job is the security
+      # gate. The compatibility matrix may install an advisory-carrying Laravel
+      # 10 to prove the code still runs on it, but the newest resolvable set of
+      # dependencies has to stay clean, and this is where that is enforced.
+      - name: Install the current dependencies
+        run: composer update --prefer-dist --no-interaction --no-progress
+
+      - name: Audit the dependencies
+        run: composer audit

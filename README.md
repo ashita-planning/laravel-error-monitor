@@ -7,6 +7,14 @@
 - PHP 8.2 or newer
 - Laravel 10, 11, or 12
 
+CI verifies that the package code runs on all three major versions. That is a
+statement about code compatibility, not an endorsement of any given framework
+release: Laravel 10 and 11 have published security advisories, so the
+compatibility matrix installs them with Composer's advisory blocking disabled
+for that step only. Choosing a framework version that is safe to run in
+production remains the host application's decision. A separate CI job audits the
+newest resolvable dependency set under the normal Composer policy.
+
 ## Installation
 
 ```bash
@@ -154,7 +162,7 @@ reserved for a later phase.
 ## Development
 
 ```bash
-composer install
+composer update       # no composer.lock is committed; a library resolves fresh
 composer test         # PHPUnit through Orchestra Testbench
 composer format       # Pint
 composer format:test  # Pint, check only
@@ -163,7 +171,8 @@ composer check        # all three
 ```
 
 CI runs the same gates on PHP 8.2/8.3/8.4 against Laravel 10/11/12, plus the
-migrations and both Artisan commands inside a Testbench application.
+migrations and both Artisan commands inside a Testbench application, and audits
+the current dependency set in a separate job.
 
 Fixtures must use only synthetic and reserved documentation values. Never commit production logs, real IP addresses, email addresses, tokens, cookies, or sessions.
 

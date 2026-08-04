@@ -46,6 +46,27 @@ project adheres to [Semantic Versioning](https://semver.org/).
   container tags for collector and parser drivers, and no migration loading or
   driver resolution while the package is disabled.
 - Tests covering the above (74 tests), `CHANGELOG.md` and `CLAUDE.md`.
+- CI job `security`: audits the newest resolvable dependency set under the
+  normal Composer policy, so the compatibility matrix can install an
+  advisory-carrying Laravel 10 without losing the security gate.
+
+### Changed
+
+- CI installs the compatibility matrix with `COMPOSER_NO_BLOCKING=1`. From
+  Composer 2.9 an advisory on a package removes every affected version from the
+  resolver pool, which made Laravel 10 and 11 uninstallable and left the matrix
+  unable to test what it exists to test. The bypass is scoped to that one step
+  and never enters `composer.json`, so nothing changes for anyone installing
+  this package.
+- CI runs the Artisan commands against a file SQLite database instead of
+  `:memory:`. `migrate`, `status` and `analyze` are separate processes, and an
+  in-memory database does not outlive the first one.
+- `composer.lock` is no longer committed and is now ignored. A library resolves
+  against whatever its host application allows, and the CI matrix is what pins
+  versions; `composer validate --strict` therefore no longer needs
+  `--no-check-lock`.
+- `.gitignore` no longer swallows `tests/Fixtures/*.log`, which the log parser
+  tests need.
 
 ### Notes
 
