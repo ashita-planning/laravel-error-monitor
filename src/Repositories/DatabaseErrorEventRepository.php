@@ -91,14 +91,17 @@ final class DatabaseErrorEventRepository implements ErrorEventRepository
             return $eventModel;
         }
 
-        $firstOccurredAt = $eventModel->first_occurred_at;
-        $lastOccurredAt = $eventModel->last_occurred_at;
-        $occurredAt = $event->occurredAt;
+        $storedFirst = $eventModel->first_occurred_at;
+        $storedLast = $eventModel->last_occurred_at;
+        $incomingFirst = $this->firstOccurredAt($event);
+        $incomingLast = $this->lastOccurredAt($event);
 
         $attributes = [
             'occurrence_count' => $eventModel->occurrence_count + max(1, $event->occurrenceCount),
-            'first_occurred_at' => $firstOccurredAt === null || $occurredAt < $firstOccurredAt ? $occurredAt : $firstOccurredAt,
-            'last_occurred_at' => $lastOccurredAt === null || $occurredAt > $lastOccurredAt ? $occurredAt : $lastOccurredAt,
+            // The row spans every occurrence merged into it, so the range only
+            // ever widens.
+            'first_occurred_at' => $storedFirst === null || $incomingFirst < $storedFirst ? $incomingFirst : $storedFirst,
+            'last_occurred_at' => $storedLast === null || $incomingLast > $storedLast ? $incomingLast : $storedLast,
             'payload_hash' => $payloadHash,
         ];
 
@@ -123,8 +126,8 @@ final class DatabaseErrorEventRepository implements ErrorEventRepository
             'source' => $event->source,
             'fingerprint' => $event->fingerprint,
             'detected_date' => $this->detectedDate($event->occurredAt),
-            'first_occurred_at' => $event->firstOccurredAt ?? $event->occurredAt,
-            'last_occurred_at' => $event->lastOccurredAt ?? $event->occurredAt,
+            'first_occurred_at' => $this->firstOccurredAt($event),
+            'last_occurred_at' => $this->lastOccurredAt($event),
             'occurrence_count' => max(1, $event->occurrenceCount),
             'exception_class' => $event->exceptionClass,
             'normalized_message' => $event->normalizedMessage,
@@ -138,6 +141,26 @@ final class DatabaseErrorEventRepository implements ErrorEventRepository
             'context' => $event->context === [] ? null : $event->context,
             'metadata' => $event->metadata === [] ? null : $event->metadata,
         ];
+    }
+
+    /**
+     * Earliest moment the incoming event stands for.
+     *
+     * An event may already be an aggregate of several occurrences, in which
+     * case `occurredAt` is only its representative timestamp and the real range
+     * lives in `firstOccurredAt` / `lastOccurredAt`. Creating and updating a row
+     * have to read that range the same way, or an aggregate loses its bounds
+     * the moment it merges into an existing day.
+     */
+    private function firstOccurredAt(ErrorEventData $event): DateTimeInterface
+    {
+        return $event->firstOccurredAt ?? $event->occurredAt;
+    }
+
+    /** Latest moment the incoming event stands for. @see firstOccurredAt() */
+    private function lastOccurredAt(ErrorEventData $event): DateTimeInterface
+    {
+        return $event->lastOccurredAt ?? $event->occurredAt;
     }
 
     private function detectedDate(DateTimeInterface $occurredAt): string

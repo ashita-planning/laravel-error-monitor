@@ -52,6 +52,11 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `DatabaseErrorEventRepository` merged an already aggregated event into an
+  existing daily row using only its representative `occurredAt`, ignoring
+  `firstOccurredAt` and `lastOccurredAt`. The row's range could therefore end up
+  narrower than the occurrences it stood for. Creating and updating a row now
+  read the range the same way and the stored range only ever widens.
 - Laravel 10: the Eloquent models declared their casts through the `casts()`
   method, which only exists from Laravel 11 and is silently ignored on 10. Dates
   came back as strings and `context` / `metadata` as raw JSON, so the repository
