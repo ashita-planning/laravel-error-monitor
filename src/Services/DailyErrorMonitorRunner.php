@@ -7,6 +7,7 @@ namespace Apkk\LaravelErrorMonitor\Services;
 use Apkk\LaravelErrorMonitor\Collectors\ApacheAccessLogCollector;
 use Apkk\LaravelErrorMonitor\Collectors\ApacheErrorLogCollector;
 use Apkk\LaravelErrorMonitor\Collectors\LaravelLogCollector;
+use Apkk\LaravelErrorMonitor\Collectors\ServerLogSourceCollector;
 use Apkk\LaravelErrorMonitor\Contracts\ErrorEventRepository;
 use Apkk\LaravelErrorMonitor\Contracts\IssuePublisher;
 use Apkk\LaravelErrorMonitor\Contracts\LogCollector;
@@ -85,7 +86,7 @@ final class DailyErrorMonitorRunner
         }
 
         $warnings = [];
-        $grouped = $this->groupFilesBySource($source);
+        $grouped = $this->groupFilesBySource($source, $window);
 
         /** @var array<string, array<int, ErrorEventData>> $events */
         $events = [];
@@ -130,11 +131,13 @@ final class DailyErrorMonitorRunner
      *
      * @return array<string, array<int, LogFileData>>
      */
-    private function groupFilesBySource(?string $source): array
+    private function groupFilesBySource(?string $source, ?AnalysisWindowData $window): array
     {
         $grouped = [];
 
         foreach ($this->collectors as $collector) {
+            $collector = $collector instanceof ServerLogSourceCollector ? $collector->withWindow($window) : $collector;
+
             foreach ($collector->collect() as $logFile) {
                 if ($source !== null && $logFile->source !== $source) {
                     continue;

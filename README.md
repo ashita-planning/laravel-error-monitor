@@ -299,6 +299,67 @@ A collector tags every file it finds with its own source key, and the analyzer
 hands each file to the first parser whose `supports()` claims it, so parsers for
 different formats never collide.
 
+### Logs the package cannot reach itself
+
+Shared hosting, an archive bucket, another machine entirely — anywhere the core
+has no business knowing about — is served by the `ServerLogSource` contract:
+
+```php
+use Apkk\LaravelErrorMonitor\Contracts\ServerLogSource;
+use Apkk\LaravelErrorMonitor\DTO\CollectedLogFileData;
+use Apkk\LaravelErrorMonitor\ErrorMonitorServiceProvider;
+
+final class MyHostingLogSource implements ServerLogSource
+{
+    public function id(): string
+    {
+        return 'my-hosting';
+    }
+
+    public function collect(?AnalysisWindowData $window = null): iterable
+    {
+        yield new CollectedLogFileData(
+            source: 'apache_access',              // which parser claims it
+            path: '/tmp/fetched/access.log',      // readable local path
+            targetDate: new DateTimeImmutable('2026-08-03'),
+            fileHash: CollectedLogFileData::hashOf('/tmp/fetched/access.log'),
+            compressed: false,
+            metadata: ['domain' => 'shop.example', 'server_identifier' => 'web01'],
+        );
+    }
+}
+
+// In the adapter package's service provider:
+$this->app->tag([MyHostingLogSource::class], ErrorMonitorServiceProvider::SERVER_LOG_SOURCE_TAG);
+```
+
+Once the file is handed over it is indistinguishable from one found in
+`storage/logs`: same parsers, same masking, same aggregation.
+
+**Where the line falls.** The adapter owns everything about reaching the logs —
+transport, credentials, retries, rate limits — and everything about deciding
+which paths may be read at all: path traversal, symlinks and allow-listed
+directories are judgements only the adapter can make, because only it knows what
+"allowed" means in its environment. The core checks that the file it was handed
+exists and is readable, deduplicates by `source + target_date + file_hash`, and
+reads it.
+
+A few things worth knowing:
+
+- **Do not decompress.** The bundled parsers stream `.gz` through `gzopen`, so
+  an adapter that expands a file first is doing work the core would have done
+  for free. Report it with `compressed: true` and hand over the `.gz`.
+- **Hand over paths, not streams.** A resource does not serialize and a closure
+  is awkward to test, so the DTO takes a local path. A `ReadableLogStream`
+  contract can follow if a source ever genuinely cannot produce a file.
+- **`file_hash` is an identity claim, not an integrity check.** The core does not
+  recompute it — that would mean reading every byte of every log twice — it uses
+  it to recognise a file it has already seen.
+- **`metadata` is free-form.** `domain` and `server_identifier` are conventions,
+  not requirements; nothing in the core reads them.
+- A source that throws is reported as a warning and the run continues on the
+  remaining sources. Two sources may not share an `id()`.
+
 ## Current scope
 
 Implemented:
@@ -326,8 +387,11 @@ status is never mistaken for a reported one.
 ## Explicitly out of scope
 
 GitHub API calls and issue creation, duplicate issue handling, AI agent API
-calls, and XServer-specific log handling are reserved for a later phase, and are
-to live in their own packages rather than in this one.
+calls, and hosting-specific log retrieval live in their own packages, never in
+this one. In particular **no XServer path convention, server id or API call
+belongs in the core** — the `ServerLogSource` contract above is the whole of
+what the core offers such a package, and it is deliberately small enough that an
+S3 or an SSH adapter fits the same shape.
 
 ## Development
 

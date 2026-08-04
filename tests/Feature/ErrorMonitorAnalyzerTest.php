@@ -25,8 +25,9 @@ final class ErrorMonitorAnalyzerTest extends TestCase
     {
         $result = app(ErrorMonitorAnalyzer::class)->analyze();
 
-        // The Laravel, Apache access and Apache error log drivers.
-        $this->assertSame(3, $result->sourcesConfigured);
+        // Laravel, Apache access, Apache error, plus the collector fronting
+        // external sources - which is registered even with no adapter present.
+        $this->assertSame(4, $result->sourcesConfigured);
         // Every test log path points at a directory that does not exist.
         $this->assertSame(0, $result->filesAnalyzed);
         $this->assertSame([], $result->warnings);
