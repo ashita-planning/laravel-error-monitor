@@ -1,0 +1,70 @@
+name: Task for the issue agent
+description: A change you want investigated, planned and possibly implemented automatically.
+labels: ["ai-fix"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The agent runs in two stages. Opened with `ai-fix`, it investigates and
+        posts a plan; it implements nothing until somebody reads that plan and
+        adds `plan-approved`.
+
+        Leave the plan sections empty if you want the agent to fill them in.
+
+        Some subjects are never implemented automatically - authentication,
+        payments, data deletion, migrations, security, and anything that cannot
+        be reproduced. Those stop at a plan whatever labels are applied.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: 概要
+      description: What is wrong, and how you noticed.
+      placeholder: The Apache access log parser drops the referer when the user agent contains a quote.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 再現手順
+      description: How to see it happen. Say so if you cannot reproduce it - that changes what the agent may do.
+    validations:
+      required: false
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: 対象
+      description: Files or areas you expect to change. Leave blank for the agent to propose.
+    validations:
+      required: false
+
+  - type: textarea
+    id: plan
+    attributes:
+      label: 実装プラン
+      description: Numbered steps. Leave blank for the agent to propose one.
+      placeholder: |
+        1. …
+        2. …
+    validations:
+      required: false
+
+  - type: textarea
+    id: tests
+    attributes:
+      label: テスト項目
+      description: What should be tested, including the case that currently fails.
+    validations:
+      required: false
+
+  - type: textarea
+    id: done
+    attributes:
+      label: 完了条件
+      description: How somebody would know it worked.
+      placeholder: |
+        - `composer check` passes
+    validations:
+      required: false

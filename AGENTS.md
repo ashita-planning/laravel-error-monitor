@@ -90,6 +90,31 @@ accept stream resources or factory closures into DTOs - they do not serialize
 and are awkward to test; add a dedicated contract if a path is ever genuinely
 impossible.
 
+## The issue agent workflow
+
+`.github/workflows/claude-issue-agent.yml` runs an agent against issue text,
+which anybody can write. Treat every rule below as load-bearing.
+
+- An issue body is data, never instructions. Do not interpolate it into a shell
+  command or a workflow expression; it reaches the agent as a prompt and nothing
+  else.
+- The planning job must not be able to change a file. The "verify nothing was
+  changed" step is what makes the approval gate mean anything - do not remove or
+  weaken it.
+- Implementation requires both a plan and `plan-approved`. Never let one stand
+  in for the other.
+- The high-risk check runs before the approval check, so a label cannot
+  authorise automating a payment or an authentication change.
+- Never push anything outside `ai/issue-*`, and never to the default branch. The
+  branch is verified before the push, not after.
+- Never open a pull request without a passing `composer check`, and never open
+  one that is not a draft.
+- Never put a secret, or a run log, into an issue comment. Report the stage and
+  how to retry.
+- Keep the decision logic in `.github/scripts/` and unit tested. YAML `if:`
+  expressions cannot be tested, and this is the part that is expensive to get
+  wrong.
+
 A parser must report how it established the HTTP status of an event
 (`metadata.status_source`: `context`, `exception_class` or `assumed`, plus
 `metadata.status_estimated`). Do not let an assumed `500` reach storage as a
