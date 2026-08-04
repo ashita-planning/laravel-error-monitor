@@ -35,21 +35,70 @@ final class Sha256FingerprintGeneratorTest extends TestCase
         );
     }
 
-    private function event(string $normalizedMessage): ErrorEventData
+    public function test_it_can_exclude_line_numbers_methods_and_routes(): void
+    {
+        config()->set('error-monitor.fingerprint.include_line_number', false);
+        config()->set('error-monitor.fingerprint.include_method', false);
+        config()->set('error-monitor.fingerprint.include_route', false);
+
+        $generator = app(Sha256FingerprintGenerator::class);
+        $material = $generator->material($this->event('Invoice id={id} failed'));
+
+        $this->assertArrayNotHasKey('line', $material);
+        $this->assertArrayNotHasKey('method', $material);
+        $this->assertArrayNotHasKey('route', $material);
+        $this->assertArrayNotHasKey('line', $material['application_frames'][0]);
+    }
+
+    public function test_a_moved_line_keeps_the_same_identity_when_line_numbers_are_excluded(): void
+    {
+        config()->set('error-monitor.fingerprint.include_line_number', false);
+
+        $generator = app(Sha256FingerprintGenerator::class);
+
+        $this->assertSame(
+            $generator->generate($this->event('Invoice id={id} failed')),
+            $generator->generate($this->event('Invoice id={id} failed', line: 4242)),
+        );
+    }
+
+    public function test_it_falls_back_to_vendor_frames_when_there_is_no_application_frame(): void
+    {
+        $generator = app(Sha256FingerprintGenerator::class);
+        $event = $this->event('Invoice id={id} failed')->with(stackFrames: [
+            new StackFrameData('/var/www/vendor/laravel/framework/src/Router.php', 260, 'Router', 'run', '->', false),
+        ]);
+
+        $material = $generator->material($event);
+
+        $this->assertSame('/var/www/vendor/laravel/framework/src/Router.php', $material['application_frames'][0]['file']);
+    }
+
+    public function test_a_different_environment_is_a_different_failure(): void
+    {
+        $generator = app(Sha256FingerprintGenerator::class);
+
+        $this->assertNotSame(
+            $generator->generate($this->event('Invoice id={id} failed')),
+            $generator->generate($this->event('Invoice id={id} failed', environment: 'staging')),
+        );
+    }
+
+    private function event(string $normalizedMessage, int $line = 44, string $environment = 'production'): ErrorEventData
     {
         return new ErrorEventData(
-            environment: 'production',
+            environment: $environment,
             source: 'laravel',
             occurredAt: new DateTimeImmutable('2026-08-03 10:20:30'),
             exceptionClass: 'RuntimeException',
             message: $normalizedMessage,
             normalizedMessage: $normalizedMessage,
             file: '/var/www/app/Services/InvoiceService.php',
-            line: 44,
+            line: $line,
             method: 'POST',
             route: '/invoices/1001?attempt=1',
             statusCode: 500,
-            stackFrames: [new StackFrameData('/var/www/app/Services/InvoiceService.php', 44, 'App\\Services\\InvoiceService', 'charge', '->', true)],
+            stackFrames: [new StackFrameData('/var/www/app/Services/InvoiceService.php', $line, 'App\\Services\\InvoiceService', 'charge', '->', true)],
             fingerprint: '',
         );
     }
