@@ -148,6 +148,15 @@ final class DatabaseErrorEventRepository implements ErrorEventRepository
         ];
     }
 
+    public function prune(DateTimeInterface $before): int
+    {
+        // The occurrence rows cascade with their aggregate, so one delete is
+        // enough to leave nothing orphaned behind.
+        return ErrorMonitorEvent::query()
+            ->whereDate('detected_date', '<', $this->detectedDate($before))
+            ->delete();
+    }
+
     /** Whether this payload has already been merged into the aggregate. */
     private function hasOccurrence(ErrorMonitorEvent $eventModel, string $payloadHash): bool
     {

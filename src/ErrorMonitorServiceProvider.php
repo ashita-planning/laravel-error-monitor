@@ -8,10 +8,12 @@ use Apkk\LaravelErrorMonitor\Collectors\ApacheAccessLogCollector;
 use Apkk\LaravelErrorMonitor\Collectors\ApacheErrorLogCollector;
 use Apkk\LaravelErrorMonitor\Collectors\LaravelLogCollector;
 use Apkk\LaravelErrorMonitor\Commands\AnalyzeErrorMonitorCommand;
+use Apkk\LaravelErrorMonitor\Commands\RunErrorMonitorCommand;
 use Apkk\LaravelErrorMonitor\Commands\StatusErrorMonitorCommand;
 use Apkk\LaravelErrorMonitor\Contracts\ErrorEventRepository;
 use Apkk\LaravelErrorMonitor\Contracts\FingerprintGenerator;
 use Apkk\LaravelErrorMonitor\Contracts\IssueLinkRepository;
+use Apkk\LaravelErrorMonitor\Contracts\IssuePublisher;
 use Apkk\LaravelErrorMonitor\Contracts\LogCollector;
 use Apkk\LaravelErrorMonitor\Contracts\LogNormalizer;
 use Apkk\LaravelErrorMonitor\Contracts\LogParser;
@@ -22,6 +24,7 @@ use Apkk\LaravelErrorMonitor\Parsers\LaravelLogParser;
 use Apkk\LaravelErrorMonitor\Repositories\DatabaseErrorEventRepository;
 use Apkk\LaravelErrorMonitor\Repositories\DatabaseIssueLinkRepository;
 use Apkk\LaravelErrorMonitor\Services\ApacheLaravelCorrelationService;
+use Apkk\LaravelErrorMonitor\Services\DailyErrorMonitorRunner;
 use Apkk\LaravelErrorMonitor\Services\DefaultLogNormalizer;
 use Apkk\LaravelErrorMonitor\Services\DefaultSensitiveDataMasker;
 use Apkk\LaravelErrorMonitor\Services\ErrorMonitorAnalyzer;
@@ -80,6 +83,21 @@ final class ErrorMonitorServiceProvider extends ServiceProvider
                 parsers: $enabled ? $this->tagged($app, self::PARSER_TAG, LogParser::class) : [],
             );
         });
+
+        $this->app->singleton(DailyErrorMonitorRunner::class, function (Application $app): DailyErrorMonitorRunner {
+            $enabled = (bool) $app->make('config')->get('error-monitor.enabled', true);
+
+            return new DailyErrorMonitorRunner(
+                analyzer: $app->make(ErrorMonitorAnalyzer::class),
+                correlation: $app->make(ApacheLaravelCorrelationService::class),
+                repository: $app->make(ErrorEventRepository::class),
+                collectors: $enabled ? $this->tagged($app, self::COLLECTOR_TAG, LogCollector::class) : [],
+                parsers: $enabled ? $this->tagged($app, self::PARSER_TAG, LogParser::class) : [],
+                // Resolved only when an adapter package has bound the contract:
+                // this package ships no publisher and performs no outbound call.
+                publisher: $app->bound(IssuePublisher::class) ? $app->make(IssuePublisher::class) : null,
+            );
+        });
     }
 
     public function boot(): void
@@ -99,6 +117,7 @@ final class ErrorMonitorServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 AnalyzeErrorMonitorCommand::class,
+                RunErrorMonitorCommand::class,
                 StatusErrorMonitorCommand::class,
             ]);
         }

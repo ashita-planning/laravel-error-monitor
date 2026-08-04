@@ -69,6 +69,59 @@ Keep defaults in the config file - the code never hardcodes them.
 
 ## Commands
 
+The daily command reads every configured source in one go:
+
+```bash
+php artisan error-monitor:run
+php artisan error-monitor:run --date=2026-08-03
+php artisan error-monitor:run --source=laravel --dry-run --json
+php artisan error-monitor:run --skip-github
+```
+
+With no options it analyses **yesterday**, which is the day a morning run is
+about. It resolves the period, reads Laravel then Apache access then Apache
+error, correlates them, stores idempotently, hands the failures to an issue
+publisher if one is installed, and finally drops aggregates past
+`retention_days`.
+
+Exit codes of `error-monitor:run`:
+
+| Code | Meaning |
+| --- | --- |
+| `0` | Every source finished |
+| `1` | The run failed outright, or every source failed |
+| `2` | Misconfiguration: disabled package, unusable date, contradictory options |
+| `3` | Another run holds the lock for the same period |
+| `4` | Collectors ran but matched no log file |
+| `5` | Some sources finished and others did not |
+
+Sources fail independently: an unreadable Apache directory says nothing about
+the Laravel log beside it, so one failing source does not discard the others'
+results, and `5` is how a partial run reports itself. Retention pruning is
+skipped entirely while any source is failing.
+
+`--dry-run` writes nothing at all — no database, no publisher, no pruning — but
+still reports what a real run would have stored. `--skip-github` only suppresses
+the `IssuePublisher` call; this package contains no issue-tracker code.
+
+### Scheduling
+
+```php
+// routes/console.php, or the schedule() method of your console kernel
+use Illuminate\Support\Facades\Schedule;
+
+Schedule::command('error-monitor:run')
+    ->dailyAt('05:00')
+    ->onOneServer()
+    ->withoutOverlapping();
+```
+
+`onOneServer()` needs a shared cache store. Even without it the command takes
+its own cache lock per period, and the database unique constraint remains the
+real safety net.
+
+`error-monitor:analyze` stays available for analysing an arbitrary period:
+
 ```bash
 php artisan error-monitor:analyze
 php artisan error-monitor:analyze --date=yesterday

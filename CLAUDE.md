@@ -19,6 +19,7 @@ application-agnostic and performs no outbound HTTP call.
 | Question | File |
 | --- | --- |
 | How the pipeline fits together | `src/Services/ErrorMonitorAnalyzer.php` |
+| How one daily run is orchestrated | `src/Services/DailyErrorMonitorRunner.php` |
 | Public API | `src/Contracts/`, `src/DTO/` |
 | How a log file becomes an event | `src/Parsers/LaravelLogParser.php`, `src/Parsers/ApacheAccessLogParser.php`, `src/Parsers/ApacheErrorLogParser.php` |
 | How an Apache 5xx is tied to an exception | `src/Services/ApacheLaravelCorrelationService.php` |
@@ -75,8 +76,9 @@ repository, the Laravel log driver (`Collectors/LaravelLogCollector` +
 (`Collectors/ApacheErrorLogCollector` + `Parsers/ApacheErrorLogParser` +
 `Support/ServerErrorClassifier`) - all registered under the container tags by
 default -
-`error-monitor:analyze` (period, dry-run, force, JSON, run lock, exit codes 0-4)
-and `error-monitor:status`.
+`error-monitor:analyze` (period, dry-run, force, JSON, run lock, exit codes 0-4),
+`error-monitor:run` (the daily command: every source, correlation, publishing
+hook, retention pruning, exit codes 0-5) and `error-monitor:status`.
 
 Not implemented: GitHub Issue publishing, AI agent integration and XServer
 collectors. Those belong in separate packages, not in this one.
