@@ -62,11 +62,18 @@ with a default so a published, out-of-date config file keeps working.
 
 ## Deferred work
 
-Do not implement GitHub Issue/API integration or XServer-specific handling yet.
-`Contracts\IssuePublisher` is a contract only - no implementation belongs in this
-package, and the `github` configuration section must stay unread by any HTTP
-call. Do not call any AI agent API (Codex, Claude, ...) from this package;
-that orchestration belongs in GitHub Actions.
+No issue tracker implementation belongs in this package. `IssuePublisher`,
+`ErrorReportData`, `IssuePublicationResultData` and `IssueLinkRepository` are the
+whole of what the core offers; a GitHub, Jira or Linear adapter lives in its own
+package. Specifically, none of the following may enter the core: a REST client,
+a Bearer token, issue labels, Markdown templates, HTML comment markers,
+`Retry-After` handling, reopen calls or tracker URL building. `ErrorReportData`
+carries plain text and no formatting - how a failure should read is the
+adapter's judgement, and one tracker's formatting in the DTO makes every other
+one awkward. Identifiers are strings: not every tracker counts.
+
+Do not call any AI agent API (Codex, Claude, ...) from this package; that
+orchestration belongs in GitHub Actions.
 
 Hosting-specific log retrieval stays out of this package. No XServer path
 convention, `server_id`/`domain` parsing, SSH or FTP client, or provider API

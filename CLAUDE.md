@@ -22,6 +22,7 @@ application-agnostic and performs no outbound HTTP call.
 | How one daily run is orchestrated | `src/Services/DailyErrorMonitorRunner.php` |
 | Public API | `src/Contracts/`, `src/DTO/` |
 | How an external package supplies logs | `src/Contracts/ServerLogSource.php`, `src/Collectors/ServerLogSourceCollector.php` |
+| How a failure reaches an issue tracker | `src/Contracts/IssuePublisher.php`, `src/DTO/ErrorReportData.php` |
 | How a log file becomes an event | `src/Parsers/LaravelLogParser.php`, `src/Parsers/ApacheAccessLogParser.php`, `src/Parsers/ApacheErrorLogParser.php` |
 | How an Apache 5xx is tied to an exception | `src/Services/ApacheLaravelCorrelationService.php` |
 | How a server failure is categorised | `src/Support/ServerErrorClassifier.php` |
@@ -86,7 +87,11 @@ Also implemented: the `ServerLogSource` extension boundary
 `Services/LogSourceRegistry` + `Collectors/ServerLogSourceCollector`), which is
 how an adapter package supplies logs the core cannot reach.
 
-Not implemented: GitHub Issue publishing, AI agent integration and the XServer
+The issue publishing boundary is implemented too: `Contracts/IssuePublisher`,
+`DTO/ErrorReportData`, `DTO/IssuePublicationResultData` and a provider-agnostic
+`IssueLinkRepository`. No tracker implementation ships here.
+
+Not implemented: any issue tracker adapter, AI agent integration and the XServer
 adapter itself. Those belong in separate packages, not in this one - see
 `AGENTS.md` for what may never enter the core.
 

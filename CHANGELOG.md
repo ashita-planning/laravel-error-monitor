@@ -80,6 +80,19 @@ project adheres to [Semantic Versioning](https://semver.org/).
   `metadata.correlation_method`, `correlation_confidence` and
   `correlation_candidates`. A 5xx with no counterpart is kept as its own event,
   which is the normal shape of a 502 or 503 that never reached PHP.
+- `DTO\ErrorReportData` and `DTO\IssuePublicationResultData`: what the core
+  hands an issue tracker and what it accepts back. The report is plain text with
+  no Markdown, labels or links, because formatting is the adapter's judgement.
+  Results carry a string identifier - GitHub hands out `1234`, Jira `OPS-42` -
+  and one of `created`, `commented`, `reopened`, `skipped` or `failed`.
+- `error-monitor:run` builds a report for every stored failure and offers it to
+  an `IssuePublisher` when one is installed, then records what came back. The
+  same report is never offered twice, so a repeated run is not a repeated API
+  call; a failed publication records nothing, so the next run retries.
+- Migration `generalize_error_monitor_issues_table`: `provider`, `external_id`,
+  `external_state` and `metadata` on `error_monitor_issues`. Additive only -
+  `repository`, `issue_number`, `issue_state` and `pull_request_number` keep
+  their meaning and are still written when the identifier is numeric.
 - `Contracts\ServerLogSource`, `DTO\CollectedLogFileData`,
   `Services\LogSourceRegistry` and `Collectors\ServerLogSourceCollector`: the
   boundary an adapter package uses to supply logs the core cannot reach. An
@@ -163,6 +176,14 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `IssuePublisher` is now `enabled()`, `provider()`, `target()` and
+  `publish(ErrorReportData): IssuePublicationResultData`. The old
+  `publish(ErrorEventData): ?int` and `comment()` assumed a numeric issue number
+  and a GitHub-shaped workflow; nothing implemented the contract yet, so nothing
+  in the wild breaks.
+- `IssueLinkRepository` takes a `provider` and a string `target`/`externalId`
+  throughout, and gained `recordPublication()`. Custom implementations must
+  follow the new signatures.
 - `LogCollector` gained `source(): string`, so a run can say which collector
   produced what. Files still carry the source a parser claims them by, so this
   is descriptive rather than a routing key. Custom collectors must implement it.

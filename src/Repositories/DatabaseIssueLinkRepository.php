@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Apkk\LaravelErrorMonitor\Repositories;
 
 use Apkk\LaravelErrorMonitor\Contracts\IssueLinkRepository;
+use Apkk\LaravelErrorMonitor\DTO\ErrorReportData;
+use Apkk\LaravelErrorMonitor\DTO\IssuePublicationResultData;
 use Apkk\LaravelErrorMonitor\Models\ErrorMonitorIssue;
 use DateTimeImmutable;
 use DateTimeInterface;
@@ -19,36 +21,53 @@ use RuntimeException;
  * preceding read: two runs that publish at the same moment end up sharing one
  * link instead of opening two issues for the same failure.
  *
- * Nothing in this package writes to the table yet - it is the persistence half
- * of the deferred issue publishing work, kept here so the schema and the
- * duplicate protection exist before the API integration does.
+ * Nothing about a particular tracker lives here. `provider` says which one a
+ * link belongs to and `external_id` holds whatever identifier it hands out, so
+ * a numeric issue number and a `OPS-42` key are stored the same way. The
+ * original GitHub-shaped columns are still written when the identifier happens
+ * to be numeric, so anything already reading them keeps working.
  */
 final class DatabaseIssueLinkRepository implements IssueLinkRepository
 {
     public function __construct(private readonly DatabaseManager $database) {}
 
-    public function find(string $environment, string $fingerprint, string $repository): ?ErrorMonitorIssue
+    public function find(string $provider, string $environment, string $fingerprint, string $target): ?ErrorMonitorIssue
     {
         /** @var ErrorMonitorIssue|null $link */
         $link = ErrorMonitorIssue::query()
+            ->where('provider', $provider)
             ->where('environment', $environment)
             ->where('fingerprint', $fingerprint)
-            ->where('repository', $repository)
+            ->where('repository', $target)
             ->first();
 
         return $link;
     }
 
-    public function link(string $environment, string $fingerprint, string $repository, int $issueNumber, string $issueState = 'open'): ErrorMonitorIssue
-    {
+    public function link(
+        string $provider,
+        string $environment,
+        string $fingerprint,
+        string $target,
+        string $externalId,
+        string $externalState = 'open',
+        array $metadata = [],
+    ): ErrorMonitorIssue {
         try {
             /** @var ErrorMonitorIssue $created */
             $created = ErrorMonitorIssue::query()->create([
+                'provider' => $provider,
                 'environment' => $environment,
                 'fingerprint' => $fingerprint,
-                'repository' => $repository,
-                'issue_number' => $issueNumber,
-                'issue_state' => $issueState,
+                'repository' => $target,
+                'external_id' => $externalId,
+                'external_state' => $externalState,
+                // The original columns stay filled in for anything already
+                // reading them. A tracker whose keys are not numeric simply
+                // records a zero here and lives in `external_id`.
+                'issue_number' => ctype_digit($externalId) ? (int) $externalId : 0,
+                'issue_state' => $externalState,
+                'metadata' => $metadata === [] ? null : $metadata,
             ]);
 
             return $created;
@@ -58,7 +77,7 @@ final class DatabaseIssueLinkRepository implements IssueLinkRepository
             }
         }
 
-        $existing = $this->find($environment, $fingerprint, $repository);
+        $existing = $this->find($provider, $environment, $fingerprint, $target);
 
         if ($existing === null) {
             throw new RuntimeException('The issue link could not be created nor read back.');
@@ -67,10 +86,11 @@ final class DatabaseIssueLinkRepository implements IssueLinkRepository
         return $existing;
     }
 
-    public function updateState(int $id, string $issueState, ?DateTimeInterface $resolvedAt = null): ErrorMonitorIssue
+    public function updateState(int $id, string $externalState, ?DateTimeInterface $resolvedAt = null): ErrorMonitorIssue
     {
-        return $this->update($id, static function (ErrorMonitorIssue $link) use ($issueState, $resolvedAt): void {
-            $link->issue_state = $issueState;
+        return $this->update($id, static function (ErrorMonitorIssue $link) use ($externalState, $resolvedAt): void {
+            $link->external_state = $externalState;
+            $link->issue_state = $externalState;
 
             // Re-opening a closed issue clears the resolution again.
             $link->resolved_at = $resolvedAt === null ? null : DateTimeImmutable::createFromInterface($resolvedAt);
@@ -98,6 +118,60 @@ final class DatabaseIssueLinkRepository implements IssueLinkRepository
             ->whereKey($id)
             ->where('last_comment_hash', $commentHash)
             ->exists();
+    }
+
+    public function recordPublication(
+        string $provider,
+        string $target,
+        ErrorReportData $report,
+        IssuePublicationResultData $result,
+    ): ?ErrorMonitorIssue {
+        // A failure leaves no trace: the next run has to try again rather than
+        // believe the report was delivered.
+        if ($result->failed()) {
+            return null;
+        }
+
+        $link = $this->find($provider, $report->environment, $report->fingerprint, $target);
+
+        if ($link === null) {
+            if ($result->externalId === '') {
+                return null;
+            }
+
+            $link = $this->link(
+                provider: $provider,
+                environment: $report->environment,
+                fingerprint: $report->fingerprint,
+                target: $target,
+                externalId: $result->externalId,
+                externalState: $result->state === '' ? 'open' : $result->state,
+                metadata: $result->metadata,
+            );
+        } elseif ($result->state !== '' && $result->state !== $link->external_state) {
+            $link = $this->updateState($link->id, $result->state);
+        }
+
+        // Remembering the report is what keeps the next run from offering it
+        // again, so it happens whether the tracker created, commented or
+        // decided there was nothing to do.
+        return $this->recordComment($link->id, self::reportHash($report), $report->lastOccurredAt);
+    }
+
+    /**
+     * Identity of one report, as stored on the link.
+     *
+     * The occurrence count is part of it on purpose: a day whose failure count
+     * has grown since the last run is worth reporting again, and one that has
+     * not is not.
+     */
+    public static function reportHash(ErrorReportData $report): string
+    {
+        return hash('sha256', implode('|', [
+            $report->identity(),
+            (string) $report->occurrenceCount,
+            $report->lastOccurredAt->format(DATE_ATOM),
+        ]));
     }
 
     /** @param callable(ErrorMonitorIssue): void $mutation */

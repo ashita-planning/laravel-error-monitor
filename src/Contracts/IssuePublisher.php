@@ -4,26 +4,48 @@ declare(strict_types=1);
 
 namespace Apkk\LaravelErrorMonitor\Contracts;
 
-use Apkk\LaravelErrorMonitor\DTO\ErrorEventData;
+use Apkk\LaravelErrorMonitor\DTO\ErrorReportData;
+use Apkk\LaravelErrorMonitor\DTO\IssuePublicationResultData;
 
 /**
- * Publishes an aggregated failure to an issue tracker.
+ * Reports an aggregated failure to an issue tracker.
  *
- * The contract exists so later phases can be written against it. No
- * implementation ships with this package: issue publishing is deferred work and
- * the package performs no outbound HTTP call today.
+ * No implementation ships with this package and none ever will: the moment a
+ * tracker's API, vocabulary or formatting enters the core, every other tracker
+ * becomes a special case. GitHub, Jira, Linear and a chat webhook are all
+ * adapters on the far side of this contract.
  *
- * Implementations must be idempotent - publishing the same failure twice has to
- * result in one issue and, at most, one comment per occurrence.
+ * Implementations must be idempotent. A daily run may be repeated - after a
+ * timeout, after a fix, by hand - and repeating it must not open a second issue
+ * or repeat a comment. The core keeps its own record of what it published and
+ * will not ask twice for the same report, but that is a first line of defence
+ * rather than the only one: only the adapter can see what the tracker already
+ * holds, including anything a previous run created before losing its answer.
+ *
+ * Adapters must never put a credential, an Authorization header or a raw
+ * response body into a result, an exception or a log line.
  */
 interface IssuePublisher
 {
     /** Whether publishing is configured and turned on. */
     public function enabled(): bool;
 
-    /** Create or update the issue tracking a failure. @return int|null Issue number, null when nothing was published. */
-    public function publish(ErrorEventData $event): ?int;
+    /** Short name of the tracker, e.g. `github`. Stored with every link. */
+    public function provider(): string;
 
-    /** Report a new occurrence on a published issue. @return bool False when the occurrence was already reported. */
-    public function comment(ErrorEventData $event, int $issueNumber): bool;
+    /**
+     * Where issues are filed - a repository, a project, a board.
+     *
+     * The core only uses it to tell two destinations apart; it never parses it.
+     */
+    public function target(): string;
+
+    /**
+     * Create, comment on, reopen or skip the issue tracking this failure.
+     *
+     * Implementations should answer with {@see IssuePublicationResultData::failure()}
+     * rather than throwing: one unreachable tracker must not end a run that has
+     * already analysed and stored everything correctly.
+     */
+    public function publish(ErrorReportData $report): IssuePublicationResultData;
 }

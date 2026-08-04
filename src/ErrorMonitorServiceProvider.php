@@ -111,6 +111,7 @@ final class ErrorMonitorServiceProvider extends ServiceProvider
                 // Resolved only when an adapter package has bound the contract:
                 // this package ships no publisher and performs no outbound call.
                 publisher: $app->bound(IssuePublisher::class) ? $app->make(IssuePublisher::class) : null,
+                links: $app->make(IssueLinkRepository::class),
             );
         });
     }
