@@ -448,6 +448,61 @@ belongs in the core** — the `ServerLogSource` contract above is the whole of
 what the core offers such a package, and it is deliberately small enough that an
 S3 or an SSH adapter fits the same shape.
 
+## The issue agent
+
+`.github/workflows/claude-issue-agent.yml` turns an issue into a plan, and an
+approved plan into a draft pull request. It runs in two stages and never skips
+the first.
+
+```
+issue labelled ai-fix
+  → investigate, post a plan          (no file may change)
+  → a person reads it, adds plan-approved
+  → implement on ai/issue-{number}, run composer check, open a draft PR
+```
+
+| Label | Meaning |
+| --- | --- |
+| `ai-fix` | Ask the agent to look at this issue |
+| `plan-approved` | A person read the plan and wants it implemented |
+| `ai-running` | An implementation is in progress |
+| `ai-done` / `ai-failed` | How the last run ended |
+| `plan-review-required` | The subject is never implemented automatically |
+
+### What it will not do
+
+**An issue body is untrusted input** — anyone can open one on a public
+repository — so the gates are on the actor and the subject, not on the text:
+
+- Only `OWNER`, `MEMBER` and `COLLABORATOR` issues are acted on at all.
+- The planning job may not modify a single file; the job fails if the working
+  tree is dirty when it finishes.
+- Implementation requires a plan **and** `plan-approved`. A plan alone is not
+  enough, and a label alone is not enough.
+- Authentication, payments, loyalty points, production data, deletions,
+  migrations, security, undocumented external APIs, non-reproducible failures
+  and major dependency upgrades **stop at a plan whatever labels are applied**.
+  `plan-approved` is a judgement about a plan, not a waiver on the subject.
+- Work happens only on `ai/issue-{number}`. The push step verifies the branch
+  name and refuses anything else, so `main` is never written to.
+- No pull request is opened unless `composer check` passes, and it is opened as
+  a draft.
+- Failures comment the stage and how to retry — never the log, which can contain
+  whatever the run happened to print.
+
+The decision logic lives in `.github/scripts/IssueAgentDecision.php` and is unit
+tested, because a YAML `if:` expression cannot be.
+
+### Setup
+
+The workflow needs two things a repository administrator has to provide:
+
+1. The [Claude GitHub App](https://github.com/apps/claude) installed on the
+   repository.
+2. An `ANTHROPIC_API_KEY` repository secret.
+
+Neither is in this repository, and the workflow does nothing without them.
+
 ## Development
 
 ```bash

@@ -29,6 +29,7 @@ application-agnostic and performs no outbound HTTP call.
 | What makes two failures "the same" | `src/Services/Sha256FingerprintGenerator.php` |
 | What gets masked | `src/Services/DefaultSensitiveDataMasker.php` |
 | What gets normalized | `src/Services/DefaultLogNormalizer.php` |
+| How an issue becomes a pull request | `.github/workflows/claude-issue-agent.yml`, `.github/scripts/IssueAgentDecision.php` |
 | Duplicate protection | `src/Repositories/DatabaseErrorEventRepository.php` (per-payload history in `error_monitor_event_occurrences`) |
 
 The order of the pipeline is fixed:
@@ -91,7 +92,13 @@ The issue publishing boundary is implemented too: `Contracts/IssuePublisher`,
 `DTO/ErrorReportData`, `DTO/IssuePublicationResultData` and a provider-agnostic
 `IssueLinkRepository`. No tracker implementation ships here.
 
-Not implemented: any issue tracker adapter, AI agent integration and the XServer
+The issue agent workflow is implemented: `.github/workflows/claude-issue-agent.yml`
+plans first and implements only an approved plan, on `ai/issue-*`, behind an
+actor gate and a high-risk gate. See `AGENTS.md` for the rules that must not be
+weakened. The package code still calls no AI API - the orchestration is entirely
+in GitHub Actions.
+
+Not implemented: any issue tracker adapter and the XServer
 adapter itself. Those belong in separate packages, not in this one - see
 `AGENTS.md` for what may never enter the core.
 

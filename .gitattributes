@@ -5,3 +5,4 @@
 /phpstan.neon export-ignore
 /pint.json export-ignore
 /AGENTS.md export-ignore
+/.github export-ignore
