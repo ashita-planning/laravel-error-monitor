@@ -100,7 +100,7 @@ original values are never returned or stored.
 | --- | --- |
 | IPv4 / IPv6 | `{ip}` |
 | E-mail addresses | `{email}` |
-| Phone numbers | `{phone}` |
+| Phone numbers (separated, `+`-prefixed, or a bare 10-11 digits behind a leading zero) | `{phone}` |
 | UUIDs | `{uuid}` |
 | Bearer tokens, JWTs, Authorization headers, CSRF tokens | `{token}` |
 | Cookie / Set-Cookie headers, session identifiers | `{session}` |
@@ -109,6 +109,14 @@ original values are never returned or stored.
 
 Arrays are masked recursively, and any key listed in `masking.mask_keys` (or in
 `masking.remove_headers`) has its whole value replaced, whatever it contains.
+A key listed in `masking.phone_keys` is replaced with `{phone}` instead - free
+text cannot tell an unseparated number from an amount, so the key settles it.
+
+A number is only read as a phone number when it looks like one: it carries
+separators, starts with `+`, sits behind a `TEL:` / `phone=` style label, or is
+ten to eleven digits behind a leading zero. Bare integers are left alone, which
+is what keeps amounts, quantities, line numbers, ids and path segments intact -
+masking runs first, so anything it removes cannot be recovered later.
 Two limits are worth knowing: the masker is pattern based, so unknown secret
 formats need an entry in `masking.patterns`, and values longer than
 `masking.max_length` are truncated before masking. If a rule cannot run at all,
