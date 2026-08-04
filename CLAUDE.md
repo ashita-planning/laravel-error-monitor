@@ -23,7 +23,7 @@ application-agnostic and performs no outbound HTTP call.
 | What makes two failures "the same" | `src/Services/Sha256FingerprintGenerator.php` |
 | What gets masked | `src/Services/DefaultSensitiveDataMasker.php` |
 | What gets normalized | `src/Services/DefaultLogNormalizer.php` |
-| Duplicate protection | `src/Repositories/DatabaseErrorEventRepository.php` |
+| Duplicate protection | `src/Repositories/DatabaseErrorEventRepository.php` (per-payload history in `error_monitor_event_occurrences`) |
 
 The order of the pipeline is fixed:
 

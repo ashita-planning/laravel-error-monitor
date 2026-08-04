@@ -50,8 +50,20 @@ project adheres to [Semantic Versioning](https://semver.org/).
   normal Composer policy, so the compatibility matrix can install an
   advisory-carrying Laravel 10 without losing the security gate.
 
+- Table `error_monitor_event_occurrences` and model
+  `ErrorMonitorEventOccurrence`: one row per distinct payload merged into a
+  daily aggregate, unique on `(error_monitor_event_id, payload_hash)`, reachable
+  through `ErrorMonitorEvent::occurrences()`.
+
 ### Fixed
 
+- Re-analysing a log double counted. A daily aggregate can hold one
+  `payload_hash`, so it only ever recognised the entry processed last; on a day
+  where one fingerprint produced several distinct entries, every earlier entry
+  looked unprocessed on the next run and was added again.
+  `hasPayloadHash()` and the merge path now read the occurrence history, and
+  its unique constraint keeps two racing runs from counting the same payload
+  twice.
 - `DatabaseErrorEventRepository` merged an already aggregated event into an
   existing daily row using only its representative `occurredAt`, ignoring
   `firstOccurredAt` and `lastOccurredAt`. The row's range could therefore end up
@@ -81,6 +93,10 @@ project adheres to [Semantic Versioning](https://semver.org/).
   `--no-check-lock`.
 - `.gitignore` no longer swallows `tests/Fixtures/*.log`, which the log parser
   tests need.
+- `error_monitor_events.payload_hash` keeps its column and is still written, but
+  its meaning is now "the payload processed last". Duplicate protection reads
+  `error_monitor_event_occurrences` instead. Anything relying on that column to
+  decide whether a payload was seen has to query the occurrences.
 
 ### Notes
 

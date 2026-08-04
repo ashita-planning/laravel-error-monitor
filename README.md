@@ -122,7 +122,8 @@ inspection, and `config('error-monitor.fingerprint')` decides which parts count.
 
 | Table | Purpose |
 | --- | --- |
-| `error_monitor_events` | Daily aggregate per failure. Unique on `(environment, source, fingerprint, detected_date)`; `payload_hash` makes re-analyzing an unchanged log a no-op. |
+| `error_monitor_events` | Daily aggregate per failure. Unique on `(environment, source, fingerprint, detected_date)`. Its `payload_hash` names the payload processed **last** and is kept for reference only; it is not what duplicate protection reads. |
+| `error_monitor_event_occurrences` | One row per distinct payload merged into a daily aggregate, unique on `(error_monitor_event_id, payload_hash)`. This is what makes re-analyzing a log a no-op: a day holding several distinct entries for one fingerprint remembers all of them, not just the newest. |
 | `error_monitor_issues` | Fingerprint to issue correspondence, unique on `(environment, fingerprint, repository)`. Reserved for the future issue integration; nothing in this package writes to it yet. |
 
 ## Extending
