@@ -5,18 +5,30 @@
   "type": "project",
   "require": {
     "php": "^8.2",
-    "ashita-planning/laravel-error-monitor": "@dev",
-    "ashita-planning/laravel-error-monitor-github": "@dev",
-    "ashita-planning/laravel-error-monitor-xserver": "@dev"
+    "ashita-planning/laravel-error-monitor": "dev-main",
+    "ashita-planning/laravel-error-monitor-github": "dev-main",
+    "ashita-planning/laravel-error-monitor-xserver": "dev-main"
   },
   "require-dev": {
     "orchestra/testbench": "^8.0|^9.0|^10.0",
     "phpunit/phpunit": "^10.5|^11.0"
   },
   "repositories": [
-    { "type": "path", "url": "../..", "options": { "symlink": true } },
-    { "type": "path", "url": "../../../laravel-error-monitor-xserver", "options": { "symlink": true } },
-    { "type": "path", "url": "../../../laravel-error-monitor-github", "options": { "symlink": true } }
+    {
+      "type": "path",
+      "url": "../..",
+      "options": { "symlink": true, "versions": { "ashita-planning/laravel-error-monitor": "dev-main" } }
+    },
+    {
+      "type": "path",
+      "url": "../../../laravel-error-monitor-xserver",
+      "options": { "symlink": true, "versions": { "ashita-planning/laravel-error-monitor-xserver": "dev-main" } }
+    },
+    {
+      "type": "path",
+      "url": "../../../laravel-error-monitor-github",
+      "options": { "symlink": true, "versions": { "ashita-planning/laravel-error-monitor-github": "dev-main" } }
+    }
   ],
   "autoload-dev": {
     "psr-4": { "Apkk\\LaravelErrorMonitor\\Integration\\Tests\\": "tests/" }

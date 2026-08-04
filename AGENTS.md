@@ -97,6 +97,13 @@ packages through path repositories. The core must never depend on the adapters
 in its own `composer.json` - the whole point of the contracts is that it does
 not have to.
 
+Each path repository names its package `dev-main` through the `versions`
+option. Without that a path repository takes its version from the checkout's
+git state, and CI checks a pull request out at a detached HEAD - the core would
+announce itself as `dev-<sha>` and the adapters, which require `dev-main`, would
+refuse to install. The application must build from three working copies whatever
+branch each one is on.
+
 Fixtures there use `example.invalid`, the documentation IP ranges and obviously
 fake tokens, and CI greps for anything that looks otherwise. Timestamps on the
 Laravel and Apache sides are aligned deliberately so correlation is exercised;
