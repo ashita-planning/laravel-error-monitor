@@ -20,6 +20,7 @@ application-agnostic and performs no outbound HTTP call.
 | --- | --- |
 | How the pipeline fits together | `src/Services/ErrorMonitorAnalyzer.php` |
 | Public API | `src/Contracts/`, `src/DTO/` |
+| How a log file becomes an event | `src/Parsers/LaravelLogParser.php` |
 | What makes two failures "the same" | `src/Services/Sha256FingerprintGenerator.php` |
 | What gets masked | `src/Services/DefaultSensitiveDataMasker.php` |
 | What gets normalized | `src/Services/DefaultLogNormalizer.php` |
@@ -65,9 +66,15 @@ tests and `CHANGELOG.md` in the same change.
 
 Implemented: configuration, contracts and DTOs, masking, normalization,
 fingerprinting, daily aggregation with duplicate protection, the issue link
-repository, `error-monitor:analyze` (period, dry-run, force, JSON, run lock,
-exit codes 0-4) and `error-monitor:status`.
+repository, the Laravel log driver (`Collectors/LaravelLogCollector` +
+`Parsers/LaravelLogParser`, registered under the container tags by default),
+`error-monitor:analyze` (period, dry-run, force, JSON, run lock, exit codes 0-4)
+and `error-monitor:status`.
 
-Not implemented: log collectors and parsers (no driver ships yet, so an analysis
-run reports "no collector is configured"), Apache log support, GitHub Issue
-publishing, AI agent integration and XServer collectors.
+Not implemented: Apache log support, GitHub Issue publishing, AI agent
+integration and XServer collectors.
+
+The HTTP status of a parsed event is never asserted blindly: parsers record
+`metadata.status_source` (`context` / `exception_class` / `assumed`) and
+`metadata.status_estimated`. Keep that when touching a parser - the
+`status_codes` filter must not turn a guess into a fact.

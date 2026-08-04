@@ -18,11 +18,45 @@ use DateTimeImmutable;
 
 final class AnalyzeCommandTest extends TestCase
 {
-    public function test_it_succeeds_when_no_driver_is_registered_yet(): void
+    public function test_it_reports_that_the_bundled_driver_matched_no_file(): void
     {
         $this->artisan('error-monitor:analyze')
             ->expectsOutputToContain('Analysis completed')
+            ->assertExitCode(AnalyzeErrorMonitorCommand::EXIT_NO_LOGS);
+    }
+
+    public function test_it_analyzes_a_real_laravel_log_file(): void
+    {
+        $this->useFixtureLogs();
+
+        $this->artisan('error-monitor:analyze', ['--date' => '2026-08-03'])
             ->assertExitCode(AnalyzeErrorMonitorCommand::EXIT_SUCCESS);
+
+        // The fixture holds four ERROR entries; only the query exception is a
+        // server error, the two 404s and the INFO line are not stored.
+        $this->assertSame(1, ErrorMonitorEvent::query()->count());
+
+        $stored = ErrorMonitorEvent::query()->firstOrFail();
+
+        $this->assertSame('laravel', $stored->source);
+        $this->assertSame('production', $stored->environment);
+        $this->assertSame('Illuminate\Database\QueryException', $stored->exception_class);
+        $this->assertSame(500, $stored->status_code);
+        $this->assertSame('2026-08-03', $stored->detected_date->format('Y-m-d'));
+        $this->assertSame(64, strlen((string) $stored->fingerprint));
+        // The 500 was assumed, and the record has to say so.
+        $this->assertSame('assumed', $stored->metadata['status_source'] ?? null);
+    }
+
+    public function test_reanalyzing_the_same_laravel_log_stores_nothing_new(): void
+    {
+        $this->useFixtureLogs();
+
+        $this->artisan('error-monitor:analyze', ['--date' => '2026-08-03'])->run();
+        $this->artisan('error-monitor:analyze', ['--date' => '2026-08-03'])->run();
+
+        $this->assertSame(1, ErrorMonitorEvent::query()->count());
+        $this->assertSame(1, ErrorMonitorEvent::query()->firstOrFail()->occurrence_count);
     }
 
     public function test_it_refuses_to_run_when_the_package_is_disabled(): void
@@ -116,10 +150,21 @@ final class AnalyzeCommandTest extends TestCase
             ->assertExitCode(AnalyzeErrorMonitorCommand::EXIT_SUCCESS);
     }
 
+    /** Point the bundled Laravel driver at the fixture log. */
+    private function useFixtureLogs(): void
+    {
+        config()->set('error-monitor.laravel_log_path', dirname(__DIR__).'/Fixtures');
+
+        // The analyzer is a singleton holding the already resolved collector.
+        $this->app->forgetInstance(ErrorMonitorAnalyzer::class);
+    }
+
     /** Register the fake log drivers under the container tags the provider reads. */
     private function registerDrivers(?array $files = null): void
     {
-        $files ??= [new LogFileData('/var/log/laravel.log', 'laravel')];
+        // A source of its own, so the bundled Laravel parser does not claim the
+        // fake file and try to read a path that is not there.
+        $files ??= [new LogFileData('/var/log/tests.log', 'tests')];
 
         $this->app->bind('tests.collector', fn (): ArrayLogCollector => new ArrayLogCollector($files));
         $this->app->bind('tests.parser', fn (): ArrayLogParser => new ArrayLogParser([$this->event()]));
@@ -134,7 +179,7 @@ final class AnalyzeCommandTest extends TestCase
     {
         return new ErrorEventData(
             environment: 'production',
-            source: 'laravel',
+            source: 'tests',
             occurredAt: new DateTimeImmutable('2026-08-03 10:20:30'),
             exceptionClass: 'RuntimeException',
             message: 'Order id=1201 failed',

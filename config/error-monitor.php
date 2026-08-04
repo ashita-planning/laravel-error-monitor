@@ -6,8 +6,20 @@ return [
     'enabled' => (bool) env('ERROR_MONITOR_ENABLED', true),
     'environment' => (string) env('ERROR_MONITOR_ENVIRONMENT', env('APP_ENV', 'production')),
     'timezone' => env('ERROR_MONITOR_TIMEZONE', config('app.timezone', 'UTC')),
+    // The path may point at the log directory or at one file inside it; the
+    // patterns are always applied to the directory, so the `daily` channel's
+    // rotated files are picked up next to the `single` channel's laravel.log.
     'laravel_log_path' => env('ERROR_MONITOR_LARAVEL_LOG_PATH', storage_path('logs/laravel.log')),
     'laravel_log_patterns' => array_filter(explode(',', (string) env('ERROR_MONITOR_LARAVEL_LOG_PATTERNS', 'laravel.log,laravel-*.log'))),
+
+    // Monolog levels treated as failures. Laravel logs client errors at ERROR
+    // too, so the HTTP status - not the level - decides what is stored.
+    'laravel_log_levels' => array_filter(explode(',', (string) env('ERROR_MONITOR_LARAVEL_LOG_LEVELS', 'ERROR,CRITICAL,ALERT,EMERGENCY'))),
+
+    // Bounds on one run: the newest files only, and never a runaway log.
+    'laravel_log_max_files' => (int) env('ERROR_MONITOR_LARAVEL_LOG_MAX_FILES', 31),
+    'laravel_log_max_bytes' => (int) env('ERROR_MONITOR_LARAVEL_LOG_MAX_BYTES', 536870912),
+
     'results_path' => env('ERROR_MONITOR_RESULTS_PATH', storage_path('app/error-monitor')),
     'retention_days' => (int) env('ERROR_MONITOR_RETENTION_DAYS', 90),
     'status_codes' => array_map('intval', explode(',', (string) env('ERROR_MONITOR_STATUS_CODES', '500'))),
@@ -71,7 +83,12 @@ return [
     ],
 
     'fingerprint' => [
-        'application_paths' => array_filter(explode(',', (string) env('ERROR_MONITOR_APPLICATION_PATHS', base_path('app')))),
+        // Path fragments deciding which stack frames are "our code" and
+        // therefore identify a failure. Fragments rather than absolute paths,
+        // so a trace logged on a different deployment root still matches.
+        // A vendor fragment always wins over an application one.
+        'application_paths' => array_filter(explode(',', (string) env('ERROR_MONITOR_APPLICATION_PATHS', 'app/,routes/,modules/,packages/'))),
+        'vendor_paths' => array_filter(explode(',', (string) env('ERROR_MONITOR_VENDOR_PATHS', 'vendor/,node_modules/'))),
         'stack_frame_limit' => (int) env('ERROR_MONITOR_STACK_FRAME_LIMIT', 3),
 
         // Materials that can be excluded from the identity of a failure.

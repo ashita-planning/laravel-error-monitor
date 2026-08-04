@@ -1,0 +1,23 @@
+[2026-08-03 10:11:12] production.ERROR: No query results for model [App\Models\Reservation] 12345 {"exception":"[object] (Illuminate\\Database\\Eloquent\\ModelNotFoundException(code: 0): No query results for model [App\\Models\\Reservation] 12345 at /srv/app/app/Http/Controllers/ReservationController.php:42)
+[stacktrace]
+#0 /srv/app/app/Http/Controllers/ReservationController.php(42): App\\Http\\Controllers\\ReservationController->findReservation(12345)
+#1 /srv/app/vendor/laravel/framework/src/Illuminate/Routing/Controller.php(54): App\\Http\\Controllers\\ReservationController->show(12345)
+#2 {main}
+"}
+[2026-08-03 10:12:30] production.ERROR: No query results for model [App\Models\Reservation] 98 {"exception":"[object] (Illuminate\\Database\\Eloquent\\ModelNotFoundException(code: 0): No query results for model [App\\Models\\Reservation] 98 at /srv/app/app/Http/Controllers/ReservationController.php:42)
+[stacktrace]
+#0 /srv/app/app/Http/Controllers/ReservationController.php(42): App\\Http\\Controllers\\ReservationController->findReservation(98)
+#1 /srv/app/vendor/laravel/framework/src/Illuminate/Routing/Controller.php(54): App\\Http\\Controllers\\ReservationController->show(98)
+#2 {main}
+"}
+[2026-08-03 11:03:44] production.ERROR: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'shop.reservations' doesn't exist {"exception":"[object] (Illuminate\\Database\\QueryException(code: 42S02): SQLSTATE[42S02]: Base table or view not found at /srv/app/app/Repositories/ReservationRepository.php:88)
+[stacktrace]
+#0 /srv/app/app/Repositories/ReservationRepository.php(88): App\\Repositories\\ReservationRepository->all()
+#1 {main}
+"}
+[2026-08-03 11:20:00] production.ERROR: The route customers/999 could not be found. {"exception":"[object] (Symfony\\Component\\HttpKernel\\Exception\\NotFoundHttpException(code: 0): The route customers/999 could not be found. at /srv/app/vendor/laravel/framework/src/Illuminate/Routing/AbstractRouteCollection.php:44)
+[stacktrace]
+#0 /srv/app/vendor/laravel/framework/src/Illuminate/Routing/AbstractRouteCollection.php(44): Illuminate\\Routing\\AbstractRouteCollection->handleMatchedRoute()
+#1 {main}
+"}
+[2026-08-03 11:30:00] production.INFO: Reservation created for customer 12345

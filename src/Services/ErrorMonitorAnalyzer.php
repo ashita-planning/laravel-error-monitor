@@ -20,10 +20,9 @@ use Throwable;
  * Orchestrates the pipeline: collect, parse, mask, normalize, fingerprint and
  * store.
  *
- * Collectors and parsers are supplied from the outside - the package ships none
- * yet, so a run over a stock installation reports "no collector configured"
- * instead of guessing. Everything around them already works, which keeps a
- * future log driver down to one contract implementation each.
+ * Collectors and parsers are supplied from the outside; the package ships the
+ * Laravel log driver and registers it under the container tags. A new log
+ * format stays additive: one collector and one parser, tagged, no change here.
  */
 final class ErrorMonitorAnalyzer
 {
@@ -191,15 +190,21 @@ final class ErrorMonitorAnalyzer
         return $event->statusCode !== null && in_array($event->statusCode, $statuses, true);
     }
 
-    /** @param  array<int, string>  $warnings */
+    /**
+     * First parser claiming the file, or null when no registered parser does.
+     *
+     * @param  array<int, string>  $warnings
+     */
     private function parserFor(LogFileData $logFile, array &$warnings): ?LogParser
     {
-        if ($this->parsers === []) {
-            $warnings[] = sprintf('No parser is registered for source [%s].', $logFile->source);
-
-            return null;
+        foreach ($this->parsers as $parser) {
+            if ($parser->supports($logFile)) {
+                return $parser;
+            }
         }
 
-        return $this->parsers[0];
+        $warnings[] = sprintf('No parser is registered for source [%s].', $logFile->source);
+
+        return null;
     }
 }

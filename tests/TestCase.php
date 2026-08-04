@@ -31,6 +31,13 @@ abstract class TestCase extends Orchestra
         // on the cache table of the host application.
         $app['config']->set('cache.default', 'array');
         $app['config']->set('error-monitor.timezone', 'UTC');
+        // The bundled Laravel log driver is registered by default. Point it at
+        // a directory that does not exist so a stray log in the Testbench
+        // skeleton cannot influence a run; tests that want it point it at
+        // tests/Fixtures themselves.
+        // A file inside a directory that does not exist: the collector resolves
+        // a file path to its directory, so the parent has to be missing too.
+        $app['config']->set('error-monitor.laravel_log_path', __DIR__.'/Fixtures/no-logs/laravel.log');
     }
 
     protected function defineDatabaseMigrations(): void

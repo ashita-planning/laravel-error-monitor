@@ -69,3 +69,8 @@ call. Do not call any AI agent API (Codex, Claude, ...) from this package;
 that orchestration belongs in GitHub Actions. Future Apache and XServer
 collectors must implement the existing contracts without adding
 application-model dependencies.
+
+A parser must report how it established the HTTP status of an event
+(`metadata.status_source`: `context`, `exception_class` or `assumed`, plus
+`metadata.status_estimated`). Do not let an assumed `500` reach storage as a
+stated one - the `status_codes` filter depends on that distinction.

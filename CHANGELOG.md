@@ -45,15 +45,29 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - Service provider: migration publish tag, `IssueLinkRepository` binding,
   container tags for collector and parser drivers, and no migration loading or
   driver resolution while the package is disabled.
-- Tests covering the above (74 tests), `CHANGELOG.md` and `CLAUDE.md`.
 - CI job `security`: audits the newest resolvable dependency set under the
   normal Composer policy, so the compatibility matrix can install an
   advisory-carrying Laravel 10 without losing the security gate.
-
+- Laravel log driver: `Collectors\LaravelLogCollector` discovers the `single`
+  and `daily` channel layouts (the configured path may be the directory or any
+  file inside it), newest first, bounded by file count and file size;
+  `Parsers\LaravelLogParser` streams the Monolog default format, including
+  multi-line stack traces, the JSON context and the `[stacktrace]` block. Both
+  are bound and tagged by the service provider, so an analysis works out of the
+  box. `Support\ApplicationFrameDetector` flags application frames and
+  `Support\HttpStatusResolver` maps a throwable to the HTTP status the
+  framework would answer.
+- Every parsed event records how its HTTP status was established in
+  `metadata.status_source` (`context`, `exception_class` or `assumed`) together
+  with `metadata.status_estimated`, so an assumed 500 is never presented as a
+  fact.
+- Configuration: `laravel_log_levels`, `laravel_log_max_files`,
+  `laravel_log_max_bytes` and `fingerprint.vendor_paths`.
 - Table `error_monitor_event_occurrences` and model
   `ErrorMonitorEventOccurrence`: one row per distinct payload merged into a
   daily aggregate, unique on `(error_monitor_event_id, payload_hash)`, reachable
   through `ErrorMonitorEvent::occurrences()`.
+- Tests covering the above, `CHANGELOG.md` and `CLAUDE.md`.
 
 ### Fixed
 
@@ -78,6 +92,14 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- `LogParser` gained `supports(LogFileData): bool`. The analyzer now hands a
+  file to the first parser claiming it instead of to the first registered one,
+  which is what lets several log formats coexist. Custom parsers must implement
+  the new method.
+- `fingerprint.application_paths` now defaults to the path fragments
+  `app/,routes/,modules/,packages/` instead of the absolute `base_path('app')`,
+  so a trace logged under a different deployment root still matches. The key
+  was previously unused; it now decides which stack frames identify a failure.
 - CI installs the compatibility matrix with `COMPOSER_NO_BLOCKING=1`. From
   Composer 2.9 an advisory on a package removes every affected version from the
   resolver pool, which made Laravel 10 and 11 uninstallable and left the matrix
