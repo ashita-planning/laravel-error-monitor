@@ -21,12 +21,13 @@ use DateTimeImmutable;
 
 final class ErrorMonitorAnalyzerTest extends TestCase
 {
-    public function test_the_bundled_laravel_driver_is_configured_by_default(): void
+    public function test_the_bundled_drivers_are_configured_by_default(): void
     {
         $result = app(ErrorMonitorAnalyzer::class)->analyze();
 
-        $this->assertSame(1, $result->sourcesConfigured);
-        // The test log path points at a directory that does not exist.
+        // The Laravel log driver and the Apache access log driver.
+        $this->assertSame(2, $result->sourcesConfigured);
+        // Both test log paths point at a directory that does not exist.
         $this->assertSame(0, $result->filesAnalyzed);
         $this->assertSame([], $result->warnings);
     }

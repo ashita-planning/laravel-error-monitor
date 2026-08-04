@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Apkk\LaravelErrorMonitor;
 
+use Apkk\LaravelErrorMonitor\Collectors\ApacheAccessLogCollector;
 use Apkk\LaravelErrorMonitor\Collectors\LaravelLogCollector;
 use Apkk\LaravelErrorMonitor\Commands\AnalyzeErrorMonitorCommand;
 use Apkk\LaravelErrorMonitor\Commands\StatusErrorMonitorCommand;
@@ -14,9 +15,11 @@ use Apkk\LaravelErrorMonitor\Contracts\LogCollector;
 use Apkk\LaravelErrorMonitor\Contracts\LogNormalizer;
 use Apkk\LaravelErrorMonitor\Contracts\LogParser;
 use Apkk\LaravelErrorMonitor\Contracts\SensitiveDataMasker;
+use Apkk\LaravelErrorMonitor\Parsers\ApacheAccessLogParser;
 use Apkk\LaravelErrorMonitor\Parsers\LaravelLogParser;
 use Apkk\LaravelErrorMonitor\Repositories\DatabaseErrorEventRepository;
 use Apkk\LaravelErrorMonitor\Repositories\DatabaseIssueLinkRepository;
+use Apkk\LaravelErrorMonitor\Services\ApacheLaravelCorrelationService;
 use Apkk\LaravelErrorMonitor\Services\DefaultLogNormalizer;
 use Apkk\LaravelErrorMonitor\Services\DefaultSensitiveDataMasker;
 use Apkk\LaravelErrorMonitor\Services\ErrorMonitorAnalyzer;
@@ -53,6 +56,7 @@ final class ErrorMonitorServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(self::CONFIG_PATH, 'error-monitor');
 
         $this->registerLaravelLogDriver();
+        $this->registerApacheAccessLogDriver();
 
         $this->app->singleton(LogNormalizer::class, DefaultLogNormalizer::class);
         $this->app->singleton(SensitiveDataMasker::class, DefaultSensitiveDataMasker::class);
@@ -146,6 +150,84 @@ final class ErrorMonitorServiceProvider extends ServiceProvider
 
         $this->app->tag([LaravelLogCollector::class], self::COLLECTOR_TAG);
         $this->app->tag([LaravelLogParser::class], self::PARSER_TAG);
+    }
+
+    /**
+     * Bind the Apache access log driver and the correlation service.
+     *
+     * Tagged like the Laravel driver, so an installation with Apache logs in
+     * reach analyses both sources without any wiring of its own.
+     */
+    private function registerApacheAccessLogDriver(): void
+    {
+        $this->app->bind(ApacheAccessLogCollector::class, function (Application $app): ApacheAccessLogCollector {
+            $config = $app->make('config');
+
+            /** @var array<int, string> $patterns */
+            $patterns = (array) $config->get('error-monitor.apache_access_log_patterns', []);
+
+            return new ApacheAccessLogCollector(
+                path: (string) $config->get('error-monitor.apache_access_log_path', ''),
+                patterns: array_values($patterns),
+                maxFiles: (int) $config->get('error-monitor.laravel_log_max_files', 31),
+                maxBytes: (int) $config->get('error-monitor.laravel_log_max_bytes', 536870912),
+            );
+        });
+
+        $this->app->bind(ApacheAccessLogParser::class, function (Application $app): ApacheAccessLogParser {
+            $config = $app->make('config');
+
+            /** @var array<int, string> $statuses */
+            $statuses = (array) $config->get('error-monitor.apache_access_status_codes', []);
+            /** @var array<int, string> $patterns */
+            $patterns = (array) $config->get('error-monitor.apache_access_patterns', []);
+
+            return new ApacheAccessLogParser(
+                timezone: (string) $config->get('error-monitor.timezone', 'UTC'),
+                statusRanges: $this->statusRanges($statuses),
+                patterns: array_values($patterns),
+                // An access log states no environment, so the configured one is
+                // all there is.
+                environment: (string) $config->get('error-monitor.environment', 'production'),
+            );
+        });
+
+        $this->app->singleton(ApacheLaravelCorrelationService::class, function (Application $app): ApacheLaravelCorrelationService {
+            return new ApacheLaravelCorrelationService(
+                normalizer: $app->make(LogNormalizer::class),
+                windowSeconds: (int) $app->make('config')->get('error-monitor.correlation.window_seconds', 5),
+            );
+        });
+
+        $this->app->tag([ApacheAccessLogCollector::class], self::COLLECTOR_TAG);
+        $this->app->tag([ApacheAccessLogParser::class], self::PARSER_TAG);
+    }
+
+    /**
+     * Turn `500-599` / `502` entries into inclusive ranges.
+     *
+     * @param  array<int, string>  $statuses
+     * @return array<int, array{0: int, 1: int}>
+     */
+    private function statusRanges(array $statuses): array
+    {
+        $ranges = [];
+
+        foreach ($statuses as $status) {
+            $status = trim((string) $status);
+
+            if (preg_match('/^(\d{3})\s*-\s*(\d{3})$/', $status, $matches) === 1) {
+                $ranges[] = [(int) $matches[1], (int) $matches[2]];
+
+                continue;
+            }
+
+            if (ctype_digit($status)) {
+                $ranges[] = [(int) $status, (int) $status];
+            }
+        }
+
+        return $ranges;
     }
 
     /**

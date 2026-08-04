@@ -20,7 +20,8 @@ application-agnostic and performs no outbound HTTP call.
 | --- | --- |
 | How the pipeline fits together | `src/Services/ErrorMonitorAnalyzer.php` |
 | Public API | `src/Contracts/`, `src/DTO/` |
-| How a log file becomes an event | `src/Parsers/LaravelLogParser.php` |
+| How a log file becomes an event | `src/Parsers/LaravelLogParser.php`, `src/Parsers/ApacheAccessLogParser.php` |
+| How an Apache 5xx is tied to an exception | `src/Services/ApacheLaravelCorrelationService.php` |
 | What makes two failures "the same" | `src/Services/Sha256FingerprintGenerator.php` |
 | What gets masked | `src/Services/DefaultSensitiveDataMasker.php` |
 | What gets normalized | `src/Services/DefaultLogNormalizer.php` |
@@ -67,11 +68,14 @@ tests and `CHANGELOG.md` in the same change.
 Implemented: configuration, contracts and DTOs, masking, normalization,
 fingerprinting, daily aggregation with duplicate protection, the issue link
 repository, the Laravel log driver (`Collectors/LaravelLogCollector` +
-`Parsers/LaravelLogParser`, registered under the container tags by default),
+`Parsers/LaravelLogParser`), the Apache access log driver
+(`Collectors/ApacheAccessLogCollector` + `Parsers/ApacheAccessLogParser` +
+`Services/ApacheLaravelCorrelationService`) - all registered under the container
+tags by default -
 `error-monitor:analyze` (period, dry-run, force, JSON, run lock, exit codes 0-4)
 and `error-monitor:status`.
 
-Not implemented: Apache log support, GitHub Issue publishing, AI agent
+Not implemented: Apache error log support, GitHub Issue publishing, AI agent
 integration and XServer collectors.
 
 The HTTP status of a parsed event is never asserted blindly: parsers record
