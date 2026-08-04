@@ -6,8 +6,10 @@ namespace Apkk\LaravelErrorMonitor\Models;
 
 use DateTimeImmutable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
+ * @property int $id
  * @property string $payload_hash
  * @property DateTimeImmutable|null $first_occurred_at
  * @property DateTimeImmutable|null $last_occurred_at
@@ -36,4 +38,17 @@ final class ErrorMonitorEvent extends Model
         'context' => 'array',
         'metadata' => 'array',
     ];
+
+    /**
+     * Distinct payloads already merged into this aggregate.
+     *
+     * `payload_hash` on this row only remembers the one processed last; the
+     * full history is what makes a repeated analysis a no-op.
+     *
+     * @return HasMany<ErrorMonitorEventOccurrence, $this>
+     */
+    public function occurrences(): HasMany
+    {
+        return $this->hasMany(ErrorMonitorEventOccurrence::class, 'error_monitor_event_id');
+    }
 }

@@ -7,6 +7,7 @@ namespace Apkk\LaravelErrorMonitor\Repositories;
 use Apkk\LaravelErrorMonitor\Contracts\ErrorEventRepository;
 use Apkk\LaravelErrorMonitor\DTO\ErrorEventData;
 use Apkk\LaravelErrorMonitor\Models\ErrorMonitorEvent;
+use Apkk\LaravelErrorMonitor\Models\ErrorMonitorEventOccurrence;
 use DateTimeImmutable;
 use DateTimeInterface;
 use DateTimeZone;
@@ -47,13 +48,12 @@ final class DatabaseErrorEventRepository implements ErrorEventRepository
 
     public function hasPayloadHash(string $environment, string $source, string $fingerprint, DateTimeInterface $detectedAt, string $payloadHash): bool
     {
-        return ErrorMonitorEvent::query()
-            ->where('environment', $environment)
-            ->where('source', $source)
-            ->where('fingerprint', $fingerprint)
-            ->whereDate('detected_date', $this->detectedDate($detectedAt))
-            ->where('payload_hash', $payloadHash)
-            ->exists();
+        $eventModel = $this->findForDate($environment, $source, $fingerprint, $detectedAt);
+
+        // Asking the aggregate's own payload_hash would only ever recognise the
+        // payload processed last, so every earlier entry of the same day looked
+        // unprocessed and was counted again on the next run.
+        return $eventModel !== null && $this->hasOccurrence($eventModel, $payloadHash);
     }
 
     public function record(ErrorEventData $event, string $payloadHash): ErrorMonitorEvent
@@ -83,13 +83,18 @@ final class DatabaseErrorEventRepository implements ErrorEventRepository
         if ($eventModel === null) {
             /** @var ErrorMonitorEvent $created */
             $created = ErrorMonitorEvent::query()->create($this->attributes($event, $payloadHash));
+            $this->recordOccurrence($created, $event, $payloadHash);
 
             return $created;
         }
 
-        if (hash_equals($eventModel->payload_hash, $payloadHash)) {
+        // This payload is already part of the aggregate. Re-analysing the log
+        // it came from must not add it a second time.
+        if ($this->hasOccurrence($eventModel, $payloadHash)) {
             return $eventModel;
         }
+
+        $this->recordOccurrence($eventModel, $event, $payloadHash);
 
         $storedFirst = $eventModel->first_occurred_at;
         $storedLast = $eventModel->last_occurred_at;
@@ -141,6 +146,35 @@ final class DatabaseErrorEventRepository implements ErrorEventRepository
             'context' => $event->context === [] ? null : $event->context,
             'metadata' => $event->metadata === [] ? null : $event->metadata,
         ];
+    }
+
+    /** Whether this payload has already been merged into the aggregate. */
+    private function hasOccurrence(ErrorMonitorEvent $eventModel, string $payloadHash): bool
+    {
+        return ErrorMonitorEventOccurrence::query()
+            ->where('error_monitor_event_id', $eventModel->id)
+            ->where('payload_hash', $payloadHash)
+            ->exists();
+    }
+
+    /**
+     * Remember that this payload has been counted.
+     *
+     * The unique constraint on `(error_monitor_event_id, payload_hash)` is the
+     * real guard: two runs racing on the same entry make the second insert fail,
+     * and {@see record()} retries the transaction, which then takes the
+     * "already counted" path instead of adding the payload twice.
+     */
+    private function recordOccurrence(ErrorMonitorEvent $eventModel, ErrorEventData $event, string $payloadHash): void
+    {
+        ErrorMonitorEventOccurrence::query()->create([
+            'error_monitor_event_id' => $eventModel->id,
+            'payload_hash' => $payloadHash,
+            'occurred_at' => $event->occurredAt,
+            'first_occurred_at' => $this->firstOccurredAt($event),
+            'last_occurred_at' => $this->lastOccurredAt($event),
+            'occurrence_count' => max(1, $event->occurrenceCount),
+        ]);
     }
 
     /**
