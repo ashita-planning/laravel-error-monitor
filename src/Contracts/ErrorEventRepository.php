@@ -22,4 +22,14 @@ interface ErrorEventRepository
 
     /** Atomically persist an event or update its daily aggregate. */
     public function record(ErrorEventData $event, string $payloadHash): ErrorMonitorEvent;
+
+    /**
+     * Delete aggregates whose day is older than the given moment.
+     *
+     * Retention is the repository's business because the occurrence history
+     * hangs off the aggregates and has to go with them.
+     *
+     * @return int Aggregates removed.
+     */
+    public function prune(DateTimeInterface $before): int;
 }

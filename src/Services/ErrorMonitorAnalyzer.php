@@ -84,7 +84,7 @@ final class ErrorMonitorAnalyzer
                     foreach ($parser->parse($logFile) as $event) {
                         $detected++;
 
-                        if (! $this->shouldStore($event, $window)) {
+                        if (! $this->accepts($event, $window)) {
                             $skipped++;
 
                             continue;
@@ -173,8 +173,13 @@ final class ErrorMonitorAnalyzer
         ]));
     }
 
-    /** Whether an event passes the status filter and the analysis window. */
-    private function shouldStore(ErrorEventData $event, ?AnalysisWindowData $window): bool
+    /**
+     * Whether an event passes the status filter and the analysis window.
+     *
+     * Public so an orchestrator can make the same decision this class makes,
+     * rather than reimplementing it and drifting from it.
+     */
+    public function accepts(ErrorEventData $event, ?AnalysisWindowData $window = null): bool
     {
         if ($window !== null && ! $window->contains($event->occurredAt)) {
             return false;

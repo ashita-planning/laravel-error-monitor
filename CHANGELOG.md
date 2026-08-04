@@ -80,6 +80,20 @@ project adheres to [Semantic Versioning](https://semver.org/).
   `metadata.correlation_method`, `correlation_confidence` and
   `correlation_candidates`. A 5xx with no counterpart is kept as its own event,
   which is the normal shape of a 502 or 503 that never reached PHP.
+- `error-monitor:run`: the daily command. Resolves the period (defaulting to
+  yesterday), reads Laravel, Apache access and Apache error logs in that order,
+  correlates them, stores idempotently, hands failures to an `IssuePublisher`
+  when one is installed, and prunes past `retention_days`. Options `--date`,
+  `--from`, `--to`, `--source`, `--dry-run`, `--skip-github`, `--force`,
+  `--json`, a cache lock per period and exit codes 0-5.
+- `Services\DailyErrorMonitorRunner` plus `DTO\RunResultData` and
+  `DTO\SourceRunData`: per-source results, so one failing source neither
+  discards the others' work nor hides itself in a total. Exit code 5 reports a
+  partial run.
+- `ErrorEventRepository::prune()` and `ErrorMonitorAnalyzer::accepts()`. The
+  first gives retention a home next to the occurrence rows that cascade with it;
+  the second lets an orchestrator ask the analyzer what counts as storable
+  instead of reimplementing the rule.
 - Configuration: `masking.phone_keys`, array keys whose value is replaced with
   `{phone}` however it is written.
 - Configuration: `apache_access_log_path`, `apache_access_log_patterns`,
