@@ -41,6 +41,7 @@ abstract class TestCase extends Orchestra
         // The Apache default points at /var/log/apache2, which exists on a CI
         // runner and would put real system logs into a test run.
         $app['config']->set('error-monitor.apache_access_log_path', __DIR__.'/Fixtures/no-logs/access.log');
+        $app['config']->set('error-monitor.apache_error_log_path', __DIR__.'/Fixtures/no-logs/error.log');
     }
 
     protected function defineDatabaseMigrations(): void

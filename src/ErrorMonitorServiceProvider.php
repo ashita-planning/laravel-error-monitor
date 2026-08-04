@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Apkk\LaravelErrorMonitor;
 
 use Apkk\LaravelErrorMonitor\Collectors\ApacheAccessLogCollector;
+use Apkk\LaravelErrorMonitor\Collectors\ApacheErrorLogCollector;
 use Apkk\LaravelErrorMonitor\Collectors\LaravelLogCollector;
 use Apkk\LaravelErrorMonitor\Commands\AnalyzeErrorMonitorCommand;
 use Apkk\LaravelErrorMonitor\Commands\StatusErrorMonitorCommand;
@@ -16,6 +17,7 @@ use Apkk\LaravelErrorMonitor\Contracts\LogNormalizer;
 use Apkk\LaravelErrorMonitor\Contracts\LogParser;
 use Apkk\LaravelErrorMonitor\Contracts\SensitiveDataMasker;
 use Apkk\LaravelErrorMonitor\Parsers\ApacheAccessLogParser;
+use Apkk\LaravelErrorMonitor\Parsers\ApacheErrorLogParser;
 use Apkk\LaravelErrorMonitor\Parsers\LaravelLogParser;
 use Apkk\LaravelErrorMonitor\Repositories\DatabaseErrorEventRepository;
 use Apkk\LaravelErrorMonitor\Repositories\DatabaseIssueLinkRepository;
@@ -26,6 +28,7 @@ use Apkk\LaravelErrorMonitor\Services\ErrorMonitorAnalyzer;
 use Apkk\LaravelErrorMonitor\Services\Sha256FingerprintGenerator;
 use Apkk\LaravelErrorMonitor\Support\ApplicationFrameDetector;
 use Apkk\LaravelErrorMonitor\Support\HttpStatusResolver;
+use Apkk\LaravelErrorMonitor\Support\ServerErrorClassifier;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 
@@ -57,6 +60,7 @@ final class ErrorMonitorServiceProvider extends ServiceProvider
 
         $this->registerLaravelLogDriver();
         $this->registerApacheAccessLogDriver();
+        $this->registerApacheErrorLogDriver();
 
         $this->app->singleton(LogNormalizer::class, DefaultLogNormalizer::class);
         $this->app->singleton(SensitiveDataMasker::class, DefaultSensitiveDataMasker::class);
@@ -201,6 +205,55 @@ final class ErrorMonitorServiceProvider extends ServiceProvider
 
         $this->app->tag([ApacheAccessLogCollector::class], self::COLLECTOR_TAG);
         $this->app->tag([ApacheAccessLogParser::class], self::PARSER_TAG);
+    }
+
+    /**
+     * Bind the Apache error log driver.
+     *
+     * Registered separately from the access log driver: an installation may
+     * have one of the two readable and not the other, and the error log is the
+     * one that holds the failures which never reached the application.
+     */
+    private function registerApacheErrorLogDriver(): void
+    {
+        $this->app->bind(ApacheErrorLogCollector::class, function (Application $app): ApacheErrorLogCollector {
+            $config = $app->make('config');
+
+            /** @var array<int, string> $patterns */
+            $patterns = (array) $config->get('error-monitor.apache_error_log_patterns', []);
+
+            return new ApacheErrorLogCollector(
+                path: (string) $config->get('error-monitor.apache_error_log_path', ''),
+                patterns: array_values($patterns),
+                maxFiles: (int) $config->get('error-monitor.laravel_log_max_files', 31),
+                maxBytes: (int) $config->get('error-monitor.laravel_log_max_bytes', 536870912),
+            );
+        });
+
+        $this->app->bind(ApacheErrorLogParser::class, function (Application $app): ApacheErrorLogParser {
+            $config = $app->make('config');
+
+            /** @var array<int, string> $applicationPaths */
+            $applicationPaths = (array) $config->get('error-monitor.fingerprint.application_paths', []);
+            /** @var array<int, string> $vendorPaths */
+            $vendorPaths = (array) $config->get('error-monitor.fingerprint.vendor_paths', []);
+            /** @var array<int, string> $levels */
+            $levels = (array) $config->get('error-monitor.apache_error_log_levels', []);
+
+            return new ApacheErrorLogParser(
+                frameDetector: new ApplicationFrameDetector(
+                    applicationPaths: array_values($applicationPaths),
+                    vendorPaths: array_values($vendorPaths),
+                ),
+                classifier: new ServerErrorClassifier,
+                timezone: (string) $config->get('error-monitor.timezone', 'UTC'),
+                levels: array_values($levels),
+                environment: (string) $config->get('error-monitor.environment', 'production'),
+            );
+        });
+
+        $this->app->tag([ApacheErrorLogCollector::class], self::COLLECTOR_TAG);
+        $this->app->tag([ApacheErrorLogParser::class], self::PARSER_TAG);
     }
 
     /**
