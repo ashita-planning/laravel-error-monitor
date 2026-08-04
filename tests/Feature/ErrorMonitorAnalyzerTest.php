@@ -21,13 +21,47 @@ use DateTimeImmutable;
 
 final class ErrorMonitorAnalyzerTest extends TestCase
 {
-    public function test_it_reports_that_no_collector_is_configured(): void
+    public function test_the_bundled_laravel_driver_is_configured_by_default(): void
     {
         $result = app(ErrorMonitorAnalyzer::class)->analyze();
+
+        $this->assertSame(1, $result->sourcesConfigured);
+        // The test log path points at a directory that does not exist.
+        $this->assertSame(0, $result->filesAnalyzed);
+        $this->assertSame([], $result->warnings);
+    }
+
+    public function test_it_reports_that_no_collector_is_configured(): void
+    {
+        $analyzer = new ErrorMonitorAnalyzer(
+            masker: app(SensitiveDataMasker::class),
+            normalizer: app(LogNormalizer::class),
+            fingerprintGenerator: app(FingerprintGenerator::class),
+            repository: app(ErrorEventRepository::class),
+        );
+
+        $result = $analyzer->analyze();
 
         $this->assertSame(0, $result->filesAnalyzed);
         $this->assertSame(0, $result->sourcesConfigured);
         $this->assertContains('No log collector is configured yet.', $result->warnings);
+    }
+
+    public function test_a_parser_that_does_not_claim_the_file_is_skipped(): void
+    {
+        $analyzer = new ErrorMonitorAnalyzer(
+            masker: app(SensitiveDataMasker::class),
+            normalizer: app(LogNormalizer::class),
+            fingerprintGenerator: app(FingerprintGenerator::class),
+            repository: app(ErrorEventRepository::class),
+            collectors: [new ArrayLogCollector([new LogFileData('/var/log/laravel.log', 'laravel')])],
+            parsers: [new ArrayLogParser([$this->event()], source: 'apache_access')],
+        );
+
+        $result = $analyzer->analyze();
+
+        $this->assertSame(0, $result->eventsDetected);
+        $this->assertStringContainsString('No parser is registered for source [laravel]', implode(' ', $result->warnings));
     }
 
     public function test_it_masks_normalizes_and_fingerprints_before_storing(): void

@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Apkk\LaravelErrorMonitor\Tests\Feature;
 
+use Apkk\LaravelErrorMonitor\Collectors\LaravelLogCollector;
+use Apkk\LaravelErrorMonitor\Commands\AnalyzeErrorMonitorCommand;
 use Apkk\LaravelErrorMonitor\Contracts\ErrorEventRepository;
 use Apkk\LaravelErrorMonitor\Contracts\FingerprintGenerator;
 use Apkk\LaravelErrorMonitor\Contracts\LogNormalizer;
 use Apkk\LaravelErrorMonitor\Contracts\SensitiveDataMasker;
 use Apkk\LaravelErrorMonitor\ErrorMonitorServiceProvider;
+use Apkk\LaravelErrorMonitor\Parsers\LaravelLogParser;
 use Apkk\LaravelErrorMonitor\Tests\TestCase;
 
 final class ServiceProviderTest extends TestCase
@@ -38,12 +41,23 @@ final class ServiceProviderTest extends TestCase
 
     public function test_it_registers_artisan_commands(): void
     {
+        // The configured log directory does not exist in the test environment,
+        // so the bundled collector matches nothing and the command says so.
         $this->artisan('error-monitor:analyze')
             ->expectsOutputToContain('Analysis completed')
-            ->assertExitCode(0);
+            ->assertExitCode(AnalyzeErrorMonitorCommand::EXIT_NO_LOGS);
 
         $this->artisan('error-monitor:status')
             ->expectsOutputToContain('Registered events')
             ->assertExitCode(0);
+    }
+
+    public function test_it_registers_the_bundled_laravel_log_driver(): void
+    {
+        $collectors = iterator_to_array($this->app->tagged(ErrorMonitorServiceProvider::COLLECTOR_TAG), false);
+        $parsers = iterator_to_array($this->app->tagged(ErrorMonitorServiceProvider::PARSER_TAG), false);
+
+        $this->assertInstanceOf(LaravelLogCollector::class, $collectors[0] ?? null);
+        $this->assertInstanceOf(LaravelLogParser::class, $parsers[0] ?? null);
     }
 }

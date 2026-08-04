@@ -11,7 +11,7 @@ use RuntimeException;
 
 /**
  * Parser returning fixed events, optionally throwing to prove that one broken
- * file does not abort the whole run.
+ * file does not abort the whole run. Claims every file unless a source is given.
  */
 final class ArrayLogParser implements LogParser
 {
@@ -19,7 +19,13 @@ final class ArrayLogParser implements LogParser
     public function __construct(
         private readonly array $events = [],
         private readonly bool $throws = false,
+        private readonly ?string $source = null,
     ) {}
+
+    public function supports(LogFileData $logFile): bool
+    {
+        return $this->source === null || $logFile->source === $this->source;
+    }
 
     public function parse(LogFileData $logFile): iterable
     {

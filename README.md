@@ -41,15 +41,19 @@ All environment variables use the `ERROR_MONITOR_` prefix.
 | `enabled` | `ERROR_MONITOR_ENABLED` | `true` | Master switch. While disabled, migrations are not loaded and no driver is resolved. |
 | `environment` | `ERROR_MONITOR_ENVIRONMENT` | `APP_ENV` | Environment recorded on every event. |
 | `timezone` | `ERROR_MONITOR_TIMEZONE` | `app.timezone` | Timezone of the daily bucket. |
-| `laravel_log_path` | `ERROR_MONITOR_LARAVEL_LOG_PATH` | `storage/logs/laravel.log` | Where the Laravel logs live. |
-| `laravel_log_patterns` | `ERROR_MONITOR_LARAVEL_LOG_PATTERNS` | `laravel.log,laravel-*.log` | File patterns of the log source. |
+| `laravel_log_path` | `ERROR_MONITOR_LARAVEL_LOG_PATH` | `storage/logs/laravel.log` | Where the Laravel logs live. May be the directory or any file inside it; the patterns are applied to the directory either way. |
+| `laravel_log_patterns` | `ERROR_MONITOR_LARAVEL_LOG_PATTERNS` | `laravel.log,laravel-*.log` | File patterns of the log source. Covers the `single` and `daily` channels. |
+| `laravel_log_levels` | `ERROR_MONITOR_LARAVEL_LOG_LEVELS` | `ERROR,CRITICAL,ALERT,EMERGENCY` | Monolog levels read as failures. The HTTP status, not the level, decides what is stored. |
+| `laravel_log_max_files` | `ERROR_MONITOR_LARAVEL_LOG_MAX_FILES` | `31` | Newest files analyzed per run; `0` means no limit. |
+| `laravel_log_max_bytes` | `ERROR_MONITOR_LARAVEL_LOG_MAX_BYTES` | `536870912` | Larger files are skipped; `0` means no limit. |
 | `results_path` | `ERROR_MONITOR_RESULTS_PATH` | `storage/app/error-monitor` | Where collected material may be kept. |
 | `retention_days` | `ERROR_MONITOR_RETENTION_DAYS` | `90` | How long aggregates are kept. |
 | `status_codes` | `ERROR_MONITOR_STATUS_CODES` | `500` | Statuses worth storing. |
 | `analysis.context_before_seconds` / `context_after_seconds` | `ERROR_MONITOR_CONTEXT_*_SECONDS` | `1800` | Widen the analyzed period for correlation. |
 | `analysis.lock_seconds` | `ERROR_MONITOR_LOCK_SECONDS` | `900` | Lifetime of the run lock. |
 | `masking.*` | `ERROR_MONITOR_MASKING_*` | enabled | Replacement tokens, masked keys, removed headers, query string removal, extra patterns, length bound. |
-| `fingerprint.*` | `ERROR_MONITOR_FINGERPRINT_*` | all included | Application paths, stack frame limit, and whether the line number, HTTP method and route take part in the identity. |
+| `fingerprint.application_paths` / `vendor_paths` | `ERROR_MONITOR_APPLICATION_PATHS` / `ERROR_MONITOR_VENDOR_PATHS` | `app/,routes/,modules/,packages/` / `vendor/,node_modules/` | Path fragments deciding which stack frames are yours. A vendor fragment always wins. |
+| `fingerprint.*` | `ERROR_MONITOR_FINGERPRINT_*` | all included | Stack frame limit, and whether the line number, HTTP method and route take part in the identity. |
 | `github.*` | `ERROR_MONITOR_GITHUB_*` | disabled | Reserved for the future issue integration. Never read by any HTTP call today. |
 
 Keep defaults in the config file - the code never hardcodes them.
@@ -129,7 +133,8 @@ inspection, and `config('error-monitor.fingerprint')` decides which parts count.
 ## Extending
 
 Every step sits behind a contract, so rebinding one is enough to replace it.
-Log drivers are registered through container tags:
+Log drivers are registered through container tags - the bundled Laravel driver
+registers itself the same way, and additional formats are purely additive:
 
 ```php
 use Apkk\LaravelErrorMonitor\ErrorMonitorServiceProvider;
@@ -138,21 +143,31 @@ $this->app->tag([ApacheAccessLogCollector::class], ErrorMonitorServiceProvider::
 $this->app->tag([ApacheAccessLogParser::class], ErrorMonitorServiceProvider::PARSER_TAG);
 ```
 
+A collector tags every file it finds with its own source key, and the analyzer
+hands each file to the first parser whose `supports()` claims it, so parsers for
+different formats never collide.
+
 ## Current scope
 
 Implemented:
 
 - immutable event, stack-frame, log-file, analysis-result and analysis-window DTOs;
 - contracts for collectors, parsers, normalizers, fingerprints, masking, persistence and issue publishing;
+- the Laravel log driver: file discovery for the `single` and `daily` channels, and a streaming parser for the Monolog default format including multi-line stack traces and the JSON context;
 - masking of personal data and credentials, including arrays and sensitive keys;
 - conservative normalization of dynamic values;
 - deterministic SHA-256 fingerprints with configurable materials;
 - transactional daily aggregation in `error_monitor_events` and the issue link repository;
 - `error-monitor:analyze` and `error-monitor:status` with the options and exit codes above.
 
-`error-monitor:analyze` runs the whole pipeline, but no log driver ships yet: on
-a stock installation it reports that no collector is configured and stores
-nothing. Registering a collector and a parser is all that is missing.
+On a stock installation `error-monitor:analyze` reads `storage/logs`, keeps the
+entries whose HTTP status matches `status_codes`, and aggregates them per day.
+
+Laravel logs client errors at `ERROR` level too, so the status is derived from
+the log context first, then from the exception class, and only assumed to be
+`500` as a last resort. Every event records which of the three applied in
+`metadata.status_source`, alongside `metadata.status_estimated`, so an assumed
+status is never mistaken for a reported one.
 
 ## Explicitly out of scope
 
