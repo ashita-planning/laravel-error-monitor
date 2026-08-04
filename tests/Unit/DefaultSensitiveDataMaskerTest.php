@@ -6,6 +6,7 @@ namespace Apkk\LaravelErrorMonitor\Tests\Unit;
 
 use Apkk\LaravelErrorMonitor\Services\DefaultSensitiveDataMasker;
 use Apkk\LaravelErrorMonitor\Tests\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 final class DefaultSensitiveDataMaskerTest extends TestCase
 {
@@ -104,6 +105,90 @@ final class DefaultSensitiveDataMaskerTest extends TestCase
         config()->set('error-monitor.masking.enabled', false);
 
         $this->assertSame('mail user@example.invalid', app(DefaultSensitiveDataMasker::class)->mask('mail user@example.invalid'));
+    }
+
+    /**
+     * @param  non-empty-string  $value
+     */
+    #[DataProvider('phoneNumbers')]
+    public function test_it_masks_values_that_look_like_a_phone_number(string $value): void
+    {
+        $masked = app(DefaultSensitiveDataMasker::class)->mask($value);
+
+        $this->assertStringContainsString('{phone}', $masked, sprintf('[%s] should be masked.', $value));
+    }
+
+    /** @return array<string, array{0: string}> */
+    public static function phoneNumbers(): array
+    {
+        return [
+            'mobile with separators' => ['090-1234-5678'],
+            'landline with separators' => ['03-1234-5678'],
+            'dotted freephone' => ['0120.123.456'],
+            'bracketed area code' => ['03(1234)5678'],
+            'international separated' => ['+81-90-1234-5678'],
+            'international unseparated' => ['+819012345678'],
+            'bare eleven digits' => ['09012345678'],
+            'bare ten digits' => ['0521234567'],
+            'labelled with a colon' => ['TEL: 03-1234-5678'],
+            'labelled with equals' => ['phone=090-0000-0000'],
+            'labelled in japanese' => ['電話: 0312345678'],
+            'inside a sentence' => ['Callback to 090-1234-5678 failed'],
+        ];
+    }
+
+    /**
+     * The regression this rule exists for.
+     *
+     * A bare run of digits used to be read as a phone number, which destroyed
+     * amounts, line numbers, ids and path segments. Masking runs before
+     * normalization, so those values were gone before anything could keep them
+     * - and because the masked message feeds the fingerprint, two unrelated
+     * failures could collapse into one.
+     *
+     * @param  non-empty-string  $value
+     */
+    #[DataProvider('valuesThatAreNotPhoneNumbers')]
+    public function test_it_keeps_numbers_that_only_look_like_one(string $value): void
+    {
+        $this->assertSame($value, app(DefaultSensitiveDataMasker::class)->mask($value));
+    }
+
+    /** @return array<string, array{0: string}> */
+    public static function valuesThatAreNotPhoneNumbers(): array
+    {
+        return [
+            'an amount' => ['Amount 15000 JPY'],
+            'a large line number' => ['Undefined index at line 10234'],
+            'an order id' => ['Order 12345 failed'],
+            'an http status' => ['HTTP 500'],
+            'a memory limit' => ['Allowed memory size of 134217728 bytes exhausted'],
+            'a path segment' => ['/orders/12345'],
+            'a driver error code' => ["SQLSTATE[42S02]: Base table not found: 1146 Table 'shop.orders'"],
+            'a quantity' => ['Reserved 50000 units'],
+            'a six digit id' => ['id=123456'],
+            'a version number' => ['laravel/framework 10.48.29'],
+            'a timestamp' => ['2026-08-03 10:11:12'],
+        ];
+    }
+
+    public function test_a_phone_key_masks_its_value_whatever_it_looks_like(): void
+    {
+        // Free text cannot tell an unseparated number from an amount; the key
+        // can, so it settles it.
+        $masked = app(DefaultSensitiveDataMasker::class)->maskArray([
+            'phone' => '09012345678',
+            'telephone' => '0521234567',
+            'mobile' => '08012345678',
+            'contact-number' => '12345',
+            'amount' => '15000',
+        ]);
+
+        $this->assertSame('{phone}', $masked['phone']);
+        $this->assertSame('{phone}', $masked['telephone']);
+        $this->assertSame('{phone}', $masked['mobile']);
+        $this->assertSame('{phone}', $masked['contact-number'], 'Key comparison ignores separators.');
+        $this->assertSame('15000', $masked['amount'], 'An amount stays an amount.');
     }
 
     public function test_it_fails_closed_when_a_rule_cannot_run(): void

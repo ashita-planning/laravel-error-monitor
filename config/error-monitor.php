@@ -105,6 +105,21 @@ return [
             'client_secret',
         ],
 
+        // Array keys whose value is a phone number whatever it looks like.
+        // Free text only masks values that look like a phone number - a bare
+        // run of digits is an amount or an id far more often - so a key is what
+        // settles an unseparated value. Compared like `mask_keys`.
+        'phone_keys' => [
+            'phone',
+            'phone_number',
+            'tel',
+            'telephone',
+            'mobile',
+            'mobile_number',
+            'fax',
+            'contact_number',
+        ],
+
         // Application specific rules, applied after the built-in ones.
         'patterns' => [],
 

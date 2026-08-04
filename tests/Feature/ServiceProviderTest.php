@@ -30,13 +30,21 @@ final class ServiceProviderTest extends TestCase
         $path = $this->app->configPath('error-monitor.php');
         @unlink($path);
 
-        $this->artisan('vendor:publish', [
-            '--provider' => ErrorMonitorServiceProvider::class,
-            '--tag' => 'error-monitor-config',
-            '--force' => true,
-        ])->assertExitCode(0);
+        try {
+            $this->artisan('vendor:publish', [
+                '--provider' => ErrorMonitorServiceProvider::class,
+                '--tag' => 'error-monitor-config',
+                '--force' => true,
+            ])->assertExitCode(0);
 
-        $this->assertFileExists($path);
+            $this->assertFileExists($path);
+        } finally {
+            // The published file lands in the shared Testbench skeleton and
+            // outlives the test. `mergeConfigFrom` merges only the top level,
+            // so a stale copy overrides a whole section - a config key added
+            // later then never reaches any test that runs after this one.
+            @unlink($path);
+        }
     }
 
     public function test_it_registers_artisan_commands(): void

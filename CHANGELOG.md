@@ -80,6 +80,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
   `metadata.correlation_method`, `correlation_confidence` and
   `correlation_candidates`. A 5xx with no counterpart is kept as its own event,
   which is the normal shape of a 502 or 503 that never reached PHP.
+- Configuration: `masking.phone_keys`, array keys whose value is replaced with
+  `{phone}` however it is written.
 - Configuration: `apache_access_log_path`, `apache_access_log_patterns`,
   `apache_access_status_codes`, `apache_access_patterns` and a `correlation`
   section (`enabled`, `window_seconds`).
@@ -89,6 +91,19 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Masking read any bare run of five or more digits as a phone number, so
+  `Amount 15000 JPY`, `line 10234` and `/orders/12345` came out as `{phone}`.
+  Because masking runs before normalization, those values were gone before the
+  normalizer could keep them - contradicting the documented guarantee that
+  amounts, quantities and line numbers survive - and because the masked message
+  feeds the fingerprint, unrelated failures could collapse into one. A number is
+  now only masked when it looks like a phone number: separators, a leading `+`,
+  a `TEL:` style label, or ten to eleven digits behind a leading zero. Keys
+  listed in the new `masking.phone_keys` still mask their value outright.
+- `test_it_publishes_configuration` left the published config in the shared
+  Testbench skeleton. `mergeConfigFrom` merges only the top level, so the stale
+  copy overrode the whole `masking` section and any config key added afterwards
+  never reached the tests that ran after it. The test now cleans up.
 - Re-analysing a log double counted. A daily aggregate can hold one
   `payload_hash`, so it only ever recognised the entry processed last; on a day
   where one fingerprint produced several distinct entries, every earlier entry
