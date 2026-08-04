@@ -55,6 +55,15 @@ reorder it.
   and obviously fake credentials. Never commit real logs or personal data.
 - Do not create documentation files unless asked.
 
+## Documentation
+
+Operational guidance lives in `docs/`, not in the README. Add to the right file
+there rather than growing the README.
+
+Integration across the three packages is verified in `tests/IntegrationApp/`,
+which is a separate Composer project using path repositories. Never add the
+adapter packages to the core's own `composer.json`.
+
 ## After changing anything
 
 ```bash

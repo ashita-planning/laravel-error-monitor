@@ -3,6 +3,8 @@
     <testsuites>
         <testsuite name="Package Test Suite">
             <directory suffix="Test.php">tests</directory>
+            <!-- A separate Composer project with its own suite and its own vendor/. -->
+            <exclude>tests/IntegrationApp</exclude>
         </testsuite>
     </testsuites>
 </phpunit>

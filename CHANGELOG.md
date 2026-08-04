@@ -154,6 +154,18 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - `.github/ISSUE_TEMPLATE/ai-task.yml`, and `/.github` added to the
   `export-ignore` rules so CI tooling stays out of the distributed package.
 
+- `tests/IntegrationApp/`: an application installing all three packages at once,
+  and an end-to-end suite that takes an XServer-named gzip log through parsing,
+  correlation, aggregation and publishing to a faked GitHub issue. Covers first
+  detection, same-day re-runs, next-day recurrence, reopening after a fix, a
+  lost create response, missing and corrupt archives, a rate-limited and a
+  broken GitHub, retention, and a leak scan over everything the run wrote.
+- `.github/workflows/integration.yml`: one representative environment
+  (PHP 8.3 / Laravel 12), the three repositories checked out as siblings, plus a
+  grep over the fixtures for credential-shaped strings and real-looking domains.
+- `docs/`: installation, XServer, GitHub issues, scheduling, the issue agent,
+  security, troubleshooting and an operations checklist.
+
 ### Fixed
 
 - Masking read any bare run of five or more digits as a phone number, so

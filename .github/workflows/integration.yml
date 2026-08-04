@@ -1,0 +1,93 @@
+name: Integration
+
+# The three packages together, which no single repository's tests can show.
+#
+# One representative environment rather than the full matrix: each package
+# already runs Laravel 10, 11 and 12 on its own, and what this job adds is the
+# agreement between them, not another compatibility axis.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integration:
+    name: Three packages together / PHP 8.3 / Laravel 12
+    runs-on: ubuntu-latest
+
+    steps:
+      # Siblings, because the integration app reaches the adapters through
+      # Composer path repositories.
+      - name: Check out the core
+        uses: actions/checkout@v4
+        with:
+          path: laravel-error-monitor
+
+      - name: Check out the XServer adapter
+        uses: actions/checkout@v4
+        with:
+          repository: ashita-planning/laravel-error-monitor-xserver
+          path: laravel-error-monitor-xserver
+
+      - name: Check out the GitHub adapter
+        uses: actions/checkout@v4
+        with:
+          repository: ashita-planning/laravel-error-monitor-github
+          path: laravel-error-monitor-github
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: dom, curl, libxml, mbstring, zip, sqlite3, pdo_sqlite
+          coverage: none
+
+      - name: Install the integration application
+        working-directory: laravel-error-monitor/tests/IntegrationApp
+        run: composer update --prefer-dist --no-interaction --no-progress
+        env:
+          # Same reasoning as the compatibility matrices: an advisory on an
+          # older framework release must not stop the suite resolving.
+          COMPOSER_NO_BLOCKING: 1
+
+      - name: Run the end-to-end suite
+        working-directory: laravel-error-monitor/tests/IntegrationApp
+        run: composer test
+        env:
+          # There is no GitHub token here. Every test runs against Http::fake(),
+          # and a run that somehow reached GitHub would have nothing to reach it
+          # with.
+          ERROR_MONITOR_GITHUB_TOKEN: ''
+
+      # A last look at what the run actually produced. The suite asserts this
+      # too, but a grep over the artefacts catches a leak that slipped past an
+      # assertion nobody thought to write.
+      - name: Scan the fixtures for anything that should not be committed
+        working-directory: laravel-error-monitor/tests/IntegrationApp
+        run: |
+          set -e
+
+          if grep -rIl --exclude-dir=vendor --exclude-dir=.git \
+              -E 'ghp_[A-Za-z0-9]{30,}|github_pat_|-----BEGIN [A-Z ]*PRIVATE KEY' . \
+              | grep -v '^./tests/' ; then
+            echo "::error::A credential-shaped string is committed outside the tests."
+            exit 1
+          fi
+
+          # Real domains and non-documentation addresses have no business in a
+          # fixture. `example.invalid` and 203.0.113.0/24 are reserved for this.
+          if grep -rI --exclude-dir=vendor --exclude-dir=.git -oE \
+              '[a-z0-9-]+\.(com|jp|net|org)\b' fixtures/ | grep -v 'example\.' ; then
+            echo "::error::A real-looking domain is present in the fixtures."
+            exit 1
+          fi
+
+          echo "Nothing untoward in the fixtures."

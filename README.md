@@ -2,6 +2,19 @@
 
 `ashita-planning/laravel-error-monitor` is a Laravel package foundation for detecting, normalizing, and daily-aggregating HTTP 500 errors from application and web-server logs.
 
+## Documentation
+
+| | |
+| --- | --- |
+| [Installation](docs/installation.md) | The three packages, in order |
+| [XServer logs](docs/xserver.md) | Paths, the file-date trap, missing files |
+| [GitHub issues](docs/github-issues.md) | Token permissions, duplicate prevention |
+| [Scheduling](docs/scheduler.md) | When to run it, exit codes, retention |
+| [The issue agent](docs/claude-code-workflow.md) | Setup and the first smoke test |
+| [Security](docs/security.md) | What is masked, what is deliberately kept |
+| [Troubleshooting](docs/troubleshooting.md) | Symptom to cause |
+| [Operations checklist](docs/operations-checklist.md) | Before the first run, and monthly |
+
 ## Requirements
 
 - PHP 8.2 or newer
@@ -517,6 +530,24 @@ composer check        # all three
 CI runs the same gates on PHP 8.2/8.3/8.4 against Laravel 10/11/12, plus the
 migrations and both Artisan commands inside a Testbench application, and audits
 the current dependency set in a separate job.
+
+A separate `Integration` job installs all three packages together in
+`tests/IntegrationApp/` — an application that exists only to prove they agree
+about the contracts between them — and runs an end-to-end suite from an XServer
+gzip log through to a faked GitHub issue. The core's own `composer.json` never
+depends on the adapters; the integration app reaches them through Composer path
+repositories, so the three repositories are checked out as siblings in CI:
+
+```
+workspace/
+├── laravel-error-monitor/
+├── laravel-error-monitor-xserver/
+└── laravel-error-monitor-github/
+```
+
+```bash
+cd tests/IntegrationApp && composer update && composer test
+```
 
 Fixtures must use only synthetic and reserved documentation values. Never commit production logs, real IP addresses, email addresses, tokens, cookies, or sessions.
 

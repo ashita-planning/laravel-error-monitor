@@ -90,6 +90,18 @@ accept stream resources or factory closures into DTOs - they do not serialize
 and are awkward to test; add a dedicated contract if a path is ever genuinely
 impossible.
 
+## Integration testing
+
+`tests/IntegrationApp/` is a separate Composer project that installs all three
+packages through path repositories. The core must never depend on the adapters
+in its own `composer.json` - the whole point of the contracts is that it does
+not have to.
+
+Fixtures there use `example.invalid`, the documentation IP ranges and obviously
+fake tokens, and CI greps for anything that looks otherwise. Timestamps on the
+Laravel and Apache sides are aligned deliberately so correlation is exercised;
+keep a deliberately unaligned pair too, so mis-correlation stays tested.
+
 ## The issue agent workflow
 
 `.github/workflows/claude-issue-agent.yml` runs an agent against issue text,

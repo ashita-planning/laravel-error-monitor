@@ -1,0 +1,30 @@
+{
+  "name": "ashita-planning/laravel-error-monitor-integration",
+  "description": "End-to-end verification of the three error monitor packages together. Never published.",
+  "license": "MIT",
+  "type": "project",
+  "require": {
+    "php": "^8.2",
+    "ashita-planning/laravel-error-monitor": "@dev",
+    "ashita-planning/laravel-error-monitor-github": "@dev",
+    "ashita-planning/laravel-error-monitor-xserver": "@dev"
+  },
+  "require-dev": {
+    "orchestra/testbench": "^8.0|^9.0|^10.0",
+    "phpunit/phpunit": "^10.5|^11.0"
+  },
+  "repositories": [
+    { "type": "path", "url": "../..", "options": { "symlink": true } },
+    { "type": "path", "url": "../../../laravel-error-monitor-xserver", "options": { "symlink": true } },
+    { "type": "path", "url": "../../../laravel-error-monitor-github", "options": { "symlink": true } }
+  ],
+  "autoload-dev": {
+    "psr-4": { "Apkk\\LaravelErrorMonitor\\Integration\\Tests\\": "tests/" }
+  },
+  "scripts": {
+    "test": "phpunit"
+  },
+  "config": { "sort-packages": true },
+  "minimum-stability": "dev",
+  "prefer-stable": true
+}
