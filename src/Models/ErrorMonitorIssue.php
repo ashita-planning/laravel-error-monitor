@@ -9,9 +9,13 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * @property int $id
+ * @property string $provider
  * @property string $environment
  * @property string $fingerprint
  * @property string $repository
+ * @property string|null $external_id
+ * @property string|null $external_state
+ * @property array<string, mixed>|null $metadata
  * @property int $issue_number
  * @property string $issue_state
  * @property int|null $pull_request_number
@@ -35,5 +39,6 @@ final class ErrorMonitorIssue extends Model
         'resolved_at' => 'immutable_datetime',
         'issue_number' => 'integer',
         'pull_request_number' => 'integer',
+        'metadata' => 'array',
     ];
 }

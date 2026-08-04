@@ -9,14 +9,17 @@ use Apkk\LaravelErrorMonitor\Collectors\ApacheErrorLogCollector;
 use Apkk\LaravelErrorMonitor\Collectors\LaravelLogCollector;
 use Apkk\LaravelErrorMonitor\Collectors\ServerLogSourceCollector;
 use Apkk\LaravelErrorMonitor\Contracts\ErrorEventRepository;
+use Apkk\LaravelErrorMonitor\Contracts\IssueLinkRepository;
 use Apkk\LaravelErrorMonitor\Contracts\IssuePublisher;
 use Apkk\LaravelErrorMonitor\Contracts\LogCollector;
 use Apkk\LaravelErrorMonitor\Contracts\LogParser;
 use Apkk\LaravelErrorMonitor\DTO\AnalysisWindowData;
 use Apkk\LaravelErrorMonitor\DTO\ErrorEventData;
+use Apkk\LaravelErrorMonitor\DTO\ErrorReportData;
 use Apkk\LaravelErrorMonitor\DTO\LogFileData;
 use Apkk\LaravelErrorMonitor\DTO\RunResultData;
 use Apkk\LaravelErrorMonitor\DTO\SourceRunData;
+use Apkk\LaravelErrorMonitor\Repositories\DatabaseIssueLinkRepository;
 use DateTimeImmutable;
 use DateTimeZone;
 use Throwable;
@@ -61,6 +64,7 @@ final class DailyErrorMonitorRunner
         private readonly array $collectors = [],
         private readonly array $parsers = [],
         private readonly ?IssuePublisher $publisher = null,
+        private readonly ?IssueLinkRepository $links = null,
     ) {}
 
     /**
@@ -108,7 +112,7 @@ final class DailyErrorMonitorRunner
             $this->store($events, $results, $force);
         }
 
-        $published = $dryRun || $skipPublishing ? 0 : $this->publish($events);
+        $published = $dryRun || $skipPublishing ? 0 : $this->publish($events, $warnings);
         $pruned = $dryRun ? 0 : $this->prune($results, $warnings);
 
         if ($dryRun) {
@@ -290,29 +294,72 @@ final class DailyErrorMonitorRunner
     /**
      * Hand the failures to the issue publisher, when one is installed.
      *
-     * Nothing tracker specific happens here. The contract requires publishing
-     * to be idempotent, so this asks once per failure and lets the adapter
-     * decide whether that means an issue, a comment or nothing at all.
+     * Nothing tracker specific happens here: the core builds a plain report,
+     * asks once, and stores whatever came back. Whether that meant an issue, a
+     * comment, a reopen or nothing at all is the adapter's judgement.
+     *
+     * The report is only offered when the core has no record of having already
+     * offered exactly it. That is a first line of defence rather than the whole
+     * of the deduplication - the adapter can see the tracker and the core
+     * cannot - but it keeps a repeated run from being a repeated API call.
      *
      * @param  array<string, array<int, ErrorEventData>>  $events
+     * @param  array<int, string>  $warnings
      */
-    private function publish(array $events): int
+    private function publish(array $events, array &$warnings): int
     {
         if (! $this->publisher instanceof IssuePublisher || ! $this->publisher->enabled()) {
             return 0;
         }
 
+        $timezone = (string) config('error-monitor.timezone', 'UTC');
+        $provider = $this->publisher->provider();
+        $target = $this->publisher->target();
         $published = 0;
 
         foreach ($events as $sourceEvents) {
             foreach ($sourceEvents as $event) {
-                if ($this->publisher->publish($event) !== null) {
+                $report = ErrorReportData::fromEvent($event, $timezone);
+
+                if ($this->alreadyReported($provider, $target, $report)) {
+                    continue;
+                }
+
+                $result = $this->publisher->publish($report);
+
+                if ($result->failed()) {
+                    // The reason comes from the adapter, which the contract
+                    // forbids from putting a credential in it.
+                    $warnings[] = sprintf(
+                        'Publishing [%s] failed: %s',
+                        $report->fingerprint,
+                        (string) ($result->metadata['reason'] ?? 'unknown'),
+                    );
+
+                    continue;
+                }
+
+                $this->links?->recordPublication($provider, $target, $report, $result);
+
+                if ($result->changedAnything()) {
                     $published++;
                 }
             }
         }
 
         return $published;
+    }
+
+    /** Whether this exact report has already been handed over. */
+    private function alreadyReported(string $provider, string $target, ErrorReportData $report): bool
+    {
+        if (! $this->links instanceof IssueLinkRepository) {
+            return false;
+        }
+
+        $link = $this->links->find($provider, $report->environment, $report->fingerprint, $target);
+
+        return $link !== null && $this->links->hasComment($link->id, DatabaseIssueLinkRepository::reportHash($report));
     }
 
     /**

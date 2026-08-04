@@ -280,7 +280,62 @@ inspection, and `config('error-monitor.fingerprint')` decides which parts count.
 | --- | --- |
 | `error_monitor_events` | Daily aggregate per failure. Unique on `(environment, source, fingerprint, detected_date)`. Its `payload_hash` names the payload processed **last** and is kept for reference only; it is not what duplicate protection reads. |
 | `error_monitor_event_occurrences` | One row per distinct payload merged into a daily aggregate, unique on `(error_monitor_event_id, payload_hash)`. This is what makes re-analyzing a log a no-op: a day holding several distinct entries for one fingerprint remembers all of them, not just the newest. |
-| `error_monitor_issues` | Fingerprint to issue correspondence, unique on `(environment, fingerprint, repository)`. Reserved for the future issue integration; nothing in this package writes to it yet. |
+| `error_monitor_issues` | Failure to external issue correspondence, unique on `(environment, fingerprint, repository)`. `provider` and `external_id` hold whichever tracker and identifier were used; the original `issue_number` / `issue_state` columns are still written when the identifier is numeric. |
+
+## Reporting failures to an issue tracker
+
+The package can hand each stored failure to an issue tracker, and contains no
+tracker code whatsoever. `error-monitor:run` builds an `ErrorReportData` — plain
+text, no Markdown, no labels, no links — and asks a single method:
+
+```php
+use Apkk\LaravelErrorMonitor\Contracts\IssuePublisher;
+use Apkk\LaravelErrorMonitor\DTO\ErrorReportData;
+use Apkk\LaravelErrorMonitor\DTO\IssuePublicationResultData;
+
+final class MyTrackerPublisher implements IssuePublisher
+{
+    public function enabled(): bool { return true; }
+
+    public function provider(): string { return 'my-tracker'; }
+
+    public function target(): string { return 'acme/shop'; }
+
+    public function publish(ErrorReportData $report): IssuePublicationResultData
+    {
+        return new IssuePublicationResultData(
+            externalId: '1234',
+            state: 'open',
+            action: IssuePublicationResultData::ACTION_CREATED,
+            url: 'https://tracker.example/1234',
+        );
+    }
+}
+
+// In the adapter package's service provider:
+$this->app->singleton(IssuePublisher::class, MyTrackerPublisher::class);
+```
+
+`action` is one of `created`, `commented`, `reopened`, `skipped` or `failed`.
+**`skipped` is an outcome, not a warning** — "already reported today" is the most
+common thing a daily run has to say.
+
+Identifiers are strings because not every tracker counts: GitHub hands out
+`1234`, Jira hands out `OPS-42`.
+
+**Idempotency is shared.** The core will not offer the same report twice — it
+records what it published, and a report is "the same" only while the day, the
+occurrence count and the last occurrence are unchanged. That keeps a repeated
+run from becoming a repeated API call, but it is a first line of defence rather
+than the whole of it: only the adapter can see what the tracker already holds,
+including anything a previous run created before losing its answer.
+
+A publisher that fails should return `IssuePublicationResultData::failure()`
+rather than throw. The run continues, nothing is recorded as delivered, and the
+next run tries again. Adapters must never put a credential, an Authorization
+header or a raw response body into a result, an exception or a log line.
+
+With no publisher bound, nothing happens and nothing is reported as wrong.
 
 ## Extending
 
