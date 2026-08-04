@@ -1,0 +1,15 @@
+[Mon Aug 03 10:11:12.123456 2026] [php:error] [pid 12345] [client 203.0.113.10:54321] PHP Fatal error:  Uncaught TypeError: App\\Services\\OrderService::charge(): Argument #1 must be of type int, string given in /srv/app/app/Services/OrderService.php:42
+Stack trace:
+#0 /srv/app/app/Http/Controllers/OrderController.php(88): App\\Services\\OrderService->charge()
+#1 /srv/app/vendor/laravel/framework/src/Illuminate/Routing/Controller.php(54): App\\Http\\Controllers\\OrderController->store()
+#2 {main}
+  thrown in /srv/app/app/Services/OrderService.php on line 42
+[Mon Aug 03 10:20:00.000000 2026] [proxy_fcgi:error] [pid 2345:tid 140] [client 203.0.113.11:1234] AH01071: Got error 'PHP message: PHP Fatal error: Allowed memory size of 134217728 bytes exhausted (tried to allocate 20480 bytes) in /srv/app/app/Services/ReportService.php on line 88', referer: https://shop.example.invalid/reports
+[Mon Aug 03 10:25:00.000000 2026] [php:error] [pid 3456] [client 203.0.113.12:2345] PHP Fatal error:  Maximum execution time of 30 seconds exceeded in /srv/app/app/Jobs/ImportJob.php on line 15
+[Mon Aug 03 10:30:00.000000 2026] [core:error] [pid 4567] (13)Permission denied: [client 203.0.113.13:3456] AH00035: access to /admin denied because search permissions are missing
+[Mon Aug 03 10:35:00.000000 2026] [cgi:error] [pid 5678] [client 203.0.113.14:4567] Premature end of script headers: index.php
+[Mon Aug 03 10:40:00.000000 2026] [core:error] [pid 6789] [client 203.0.113.15:5678] File does not exist: /srv/app/public/favicon.ico
+[Mon Aug 03 10:45:00.000000 2026] [core:alert] [pid 7890] [client 203.0.113.16:6789] /srv/app/public/.htaccess: Invalid command 'RewriteEngin', perhaps misspelled
+[Mon Aug 03 10:50:00.000000 2026] [mpm_prefork:notice] [pid 8901] AH00052: child pid 9012 exit signal Segmentation fault (11)
+this line belongs to no entry at all
+[Mon Aug 03 10:55:00.000000 2026] [php:error] [pid 9123] PHP Startup: Unable to load dynamic library 'redis.so'

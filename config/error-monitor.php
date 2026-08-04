@@ -41,6 +41,21 @@ return [
     // `referer`, `agent`, `request_id`, `request_time`.
     'apache_access_patterns' => [],
 
+    // Apache error logs. This is where the failures that never reach PHP are
+    // written, so it is read even when the access log is not available.
+    'apache_error_log_path' => env('ERROR_MONITOR_APACHE_ERROR_LOG_PATH', '/var/log/apache2'),
+    'apache_error_log_patterns' => array_filter(explode(',', (string) env(
+        'ERROR_MONITOR_APACHE_ERROR_LOG_PATTERNS',
+        'error.log,error_log,error.log.*,error_log.*,*-error.log,*-error.log.*',
+    ))),
+
+    // Apache levels treated as failures. `warn` is included because mod_fcgid
+    // reports a read timeout at warning level.
+    'apache_error_log_levels' => array_filter(explode(',', (string) env(
+        'ERROR_MONITOR_APACHE_ERROR_LOG_LEVELS',
+        'error,crit,alert,emerg,warn',
+    ))),
+
     // Matching an Apache 5xx to the Laravel exception that explains it.
     'correlation' => [
         'enabled' => (bool) env('ERROR_MONITOR_CORRELATION_ENABLED', true),

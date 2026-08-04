@@ -50,6 +50,9 @@ All environment variables use the `ERROR_MONITOR_` prefix.
 | `apache_access_log_patterns` | `ERROR_MONITOR_APACHE_ACCESS_LOG_PATTERNS` | `access.log,access_log,access.log.*,…` | File patterns, including the rotated and `.gz` generations. |
 | `apache_access_status_codes` | `ERROR_MONITOR_APACHE_ACCESS_STATUS_CODES` | `500-599` | Which statuses become events. Ranges and single codes, e.g. `500-599` or `500,502,503`. |
 | `apache_access_patterns` | – | `[]` | Extra regexes with named groups for a custom `LogFormat`, tried before the built-in formats. |
+| `apache_error_log_path` | `ERROR_MONITOR_APACHE_ERROR_LOG_PATH` | `/var/log/apache2` | Where the Apache error logs live. Directory or any file inside it. |
+| `apache_error_log_patterns` | `ERROR_MONITOR_APACHE_ERROR_LOG_PATTERNS` | `error.log,error_log,error.log.*,…` | File patterns, including the rotated and `.gz` generations. |
+| `apache_error_log_levels` | `ERROR_MONITOR_APACHE_ERROR_LOG_LEVELS` | `error,crit,alert,emerg,warn` | Apache levels read as failures. `warn` is included because mod_fcgid reports a read timeout at that level. |
 | `correlation.enabled` | `ERROR_MONITOR_CORRELATION_ENABLED` | `true` | Whether Apache 5xx are matched to Laravel exceptions. |
 | `correlation.window_seconds` | `ERROR_MONITOR_CORRELATION_WINDOW_SECONDS` | `5` | How far apart the two entries may be. Both logs describe the same request, so this is seconds — not the much wider `analysis.context_*_seconds`. |
 | `results_path` | `ERROR_MONITOR_RESULTS_PATH` | `storage/app/error-monitor` | Where collected material may be kept. |
@@ -171,6 +174,45 @@ never reached the application.
 Note that `status_codes` still decides what is persisted. It defaults to `500`,
 so set `ERROR_MONITOR_STATUS_CODES=500,502,503,504` to keep gateway errors.
 
+## Apache error logs
+
+The error log holds the failures that never reached PHP at all: a process killed
+for exhausting memory, a request that outlived its timeout, a FastCGI transport
+that gave up, a permission the deploy got wrong. A PHP stack trace spanning
+several lines becomes one event, and rotated `.gz` generations are streamed like
+the access log.
+
+Each entry is sorted into the kind of failure it describes, recorded in
+`metadata.error_category`:
+
+| Category | Recognised from |
+| --- | --- |
+| `memory_exhausted` | `Allowed memory size … exhausted`, out of memory |
+| `timeout` | `Maximum execution time … exceeded`, `read data timeout`, `AH01075` |
+| `php_fatal` | `PHP Fatal error`, `Uncaught …`, `PHP Startup`, parse errors |
+| `permission` | `Permission denied`, `client denied by server configuration`, `AH01797` |
+| `fastcgi` | `FastCGI sent in stderr`, `proxy_fcgi`, `Premature end of script headers`, `AH01071` |
+| `configuration` | `.htaccess`, `Invalid command`, `AH00124` |
+| `missing_file` | `File does not exist`, `script not found` |
+| `server_internal` | `child pid … exit signal`, `Segmentation fault`, `AH00052` |
+| `unknown` | nothing matched — `category_estimated` is then `true` |
+
+Rules run from specific to general, because the specific ones are the actionable
+ones: an exhausted memory limit is also a PHP fatal error, and an `AH01071`
+quoting a PHP fatal is a bug in the application rather than in the transport
+that reported it.
+
+An error log states no HTTP status, so it is derived from the category and every
+event says so through `status_source = error_category` and
+`status_estimated = true`. `missing_file` maps to 404 and `permission` to 403,
+which is what keeps a scanner sweep out of the stored server errors: they are
+parsed and then simply not stored under the default `status_codes`.
+
+Entries can be annotated with a matching Laravel exception through the same
+`ApacheLaravelCorrelationService`. An error log entry usually carries no request
+path, so proximity in time is often all there is — which the recorded confidence
+states rather than hides.
+
 ## Fingerprints
 
 SHA-256 over environment, source, exception class, normalized message, the first
@@ -212,6 +254,7 @@ Implemented:
 - contracts for collectors, parsers, normalizers, fingerprints, masking, persistence and issue publishing;
 - the Laravel log driver: file discovery for the `single` and `daily` channels, and a streaming parser for the Monolog default format including multi-line stack traces and the JSON context;
 - the Apache access log driver: Common and Combined Log Format, rotated and gzip generations, configurable status range and custom `LogFormat` patterns, plus correlation with Laravel exceptions and a recorded confidence;
+- the Apache error log driver: multi-line PHP stack traces, gzip generations, and classification into nine kinds of server failure with the status derived from the category;
 - masking of personal data and credentials, including arrays and sensitive keys;
 - conservative normalization of dynamic values;
 - deterministic SHA-256 fingerprints with configurable materials;
@@ -229,9 +272,9 @@ status is never mistaken for a reported one.
 
 ## Explicitly out of scope
 
-Apache **error**-log parsing, GitHub API calls and issue creation, duplicate
-issue handling, AI agent API calls, and XServer-specific log handling are
-reserved for a later phase.
+GitHub API calls and issue creation, duplicate issue handling, AI agent API
+calls, and XServer-specific log handling are reserved for a later phase, and are
+to live in their own packages rather than in this one.
 
 ## Development
 

@@ -85,8 +85,21 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - Configuration: `apache_access_log_path`, `apache_access_log_patterns`,
   `apache_access_status_codes`, `apache_access_patterns` and a `correlation`
   section (`enabled`, `window_seconds`).
+- Apache error log driver: `Collectors\ApacheErrorLogCollector` and
+  `Parsers\ApacheErrorLogParser` read the failures that never reach PHP -
+  exhausted memory, timeouts, FastCGI transport errors, permission and
+  configuration problems - joining a multi-line PHP stack trace into one event
+  and streaming `.gz` generations. `Support\ServerErrorClassifier` sorts each
+  entry into one of nine kinds, recorded in `metadata.error_category` with
+  `category_source` and `category_estimated`.
+- An error log states no HTTP status, so it is derived from the category and
+  reported as `status_source = error_category` with `status_estimated = true`.
+  `missing_file` maps to 404 and `permission` to 403, which keeps scanner noise
+  out of the stored server errors under the default `status_codes`.
+- Configuration: `apache_error_log_path`, `apache_error_log_patterns` and
+  `apache_error_log_levels`.
 - `Collectors\GlobLogCollector`, the shared directory/pattern/limit behaviour
-  both file based collectors now extend.
+  every file based collector now extends.
 - Tests covering the above, `CHANGELOG.md` and `CLAUDE.md`.
 
 ### Fixed

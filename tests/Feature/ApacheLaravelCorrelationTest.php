@@ -117,6 +117,63 @@ final class ApacheLaravelCorrelationTest extends TestCase
         $this->assertSame(ApacheLaravelCorrelationService::METHOD_NONE, $correlated[1]->metadata['correlation_method']);
     }
 
+    public function test_an_apache_error_entry_correlates_through_the_same_service(): void
+    {
+        // An error log entry carries no request path, so proximity is all there
+        // is - which the confidence states rather than hides.
+        $serverError = new ErrorEventData(
+            environment: 'production',
+            source: 'apache_error',
+            occurredAt: new DateTimeImmutable('2026-08-03 10:00:01'),
+            exceptionClass: 'TypeError',
+            message: 'PHP Fatal error: Uncaught TypeError',
+            normalizedMessage: 'PHP Fatal error: Uncaught TypeError',
+            file: '/srv/app/app/Services/OrderService.php',
+            line: 42,
+            method: null,
+            route: null,
+            statusCode: 500,
+            stackFrames: [],
+            fingerprint: '',
+            metadata: ['error_category' => 'php_fatal'],
+        );
+
+        $correlated = $this->service()->correlateOne($serverError, [
+            $this->laravel('2026-08-03 10:00:00', '/orders/12', 'POST'),
+        ]);
+
+        $this->assertSame(ApacheLaravelCorrelationService::METHOD_TIME, $correlated->metadata['correlation_method']);
+        $this->assertSame('RuntimeException', $correlated->metadata['correlated_exception_class']);
+        // The classification survives the annotation.
+        $this->assertSame('php_fatal', $correlated->metadata['error_category']);
+    }
+
+    public function test_a_server_error_with_nothing_to_match_keeps_its_classification(): void
+    {
+        $serverError = new ErrorEventData(
+            environment: 'production',
+            source: 'apache_error',
+            occurredAt: new DateTimeImmutable('2026-08-03 10:00:00'),
+            exceptionClass: 'ServerError',
+            message: 'AH00052: child pid 9012 exit signal Segmentation fault',
+            normalizedMessage: 'AH00052: child pid 9012 exit signal Segmentation fault',
+            file: null,
+            line: null,
+            method: null,
+            route: null,
+            statusCode: 500,
+            stackFrames: [],
+            fingerprint: '',
+            metadata: ['error_category' => 'server_internal', 'status_estimated' => true],
+        );
+
+        $correlated = $this->service()->correlateOne($serverError, []);
+
+        $this->assertSame(ApacheLaravelCorrelationService::METHOD_NONE, $correlated->metadata['correlation_method']);
+        $this->assertSame('server_internal', $correlated->metadata['error_category']);
+        $this->assertSame(500, $correlated->statusCode);
+    }
+
     private function service(int $windowSeconds = 5): ApacheLaravelCorrelationService
     {
         return new ApacheLaravelCorrelationService(app(LogNormalizer::class), $windowSeconds);
