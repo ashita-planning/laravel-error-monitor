@@ -50,6 +50,15 @@ project adheres to [Semantic Versioning](https://semver.org/).
   normal Composer policy, so the compatibility matrix can install an
   advisory-carrying Laravel 10 without losing the security gate.
 
+### Fixed
+
+- Laravel 10: the Eloquent models declared their casts through the `casts()`
+  method, which only exists from Laravel 11 and is silently ignored on 10. Dates
+  came back as strings and `context` / `metadata` as raw JSON, so the repository
+  failed with "Call to a member function format() on string" and stored nothing.
+  Both models now use the `$casts` property, which every supported version
+  honours, and a test pins the expectation.
+
 ### Changed
 
 - CI installs the compatibility matrix with `COMPOSER_NO_BLOCKING=1`. From

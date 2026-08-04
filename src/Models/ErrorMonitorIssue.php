@@ -26,14 +26,14 @@ final class ErrorMonitorIssue extends Model
     /** @var array<int, string> */
     protected $guarded = [];
 
-    /** @return array<string, string> */
-    protected function casts(): array
-    {
-        return [
-            'last_reported_at' => 'immutable_datetime',
-            'resolved_at' => 'immutable_datetime',
-            'issue_number' => 'integer',
-            'pull_request_number' => 'integer',
-        ];
-    }
+    // Declared as a property rather than the casts() method: that method is
+    // Laravel 11 and newer, and on Laravel 10 it is silently ignored, which
+    // hands back raw strings instead of dates.
+    /** @var array<string, string> */
+    protected $casts = [
+        'last_reported_at' => 'immutable_datetime',
+        'resolved_at' => 'immutable_datetime',
+        'issue_number' => 'integer',
+        'pull_request_number' => 'integer',
+    ];
 }
