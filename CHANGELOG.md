@@ -67,6 +67,24 @@ project adheres to [Semantic Versioning](https://semver.org/).
   `ErrorMonitorEventOccurrence`: one row per distinct payload merged into a
   daily aggregate, unique on `(error_monitor_event_id, payload_hash)`, reachable
   through `ErrorMonitorEvent::occurrences()`.
+- Apache access log driver: `Collectors\ApacheAccessLogCollector` finds the
+  rotated and gzip generations alongside the live log;
+  `Parsers\ApacheAccessLogParser` reads Common and Combined Log Format, streams
+  `.gz` without expanding it onto disk, accepts extra named-group regexes for a
+  custom `LogFormat`, and turns only the configured status range into events.
+  The status is reported by the server, so events carry
+  `metadata.status_source = access_log` and `status_estimated = false`.
+- `Services\ApacheLaravelCorrelationService` matches an Apache 5xx to the Laravel
+  exception that explains it - request id, then time plus method plus normalized
+  path, then time plus path, then proximity alone - and records
+  `metadata.correlation_method`, `correlation_confidence` and
+  `correlation_candidates`. A 5xx with no counterpart is kept as its own event,
+  which is the normal shape of a 502 or 503 that never reached PHP.
+- Configuration: `apache_access_log_path`, `apache_access_log_patterns`,
+  `apache_access_status_codes`, `apache_access_patterns` and a `correlation`
+  section (`enabled`, `window_seconds`).
+- `Collectors\GlobLogCollector`, the shared directory/pattern/limit behaviour
+  both file based collectors now extend.
 - Tests covering the above, `CHANGELOG.md` and `CLAUDE.md`.
 
 ### Fixed

@@ -38,6 +38,9 @@ abstract class TestCase extends Orchestra
         // A file inside a directory that does not exist: the collector resolves
         // a file path to its directory, so the parent has to be missing too.
         $app['config']->set('error-monitor.laravel_log_path', __DIR__.'/Fixtures/no-logs/laravel.log');
+        // The Apache default points at /var/log/apache2, which exists on a CI
+        // runner and would put real system logs into a test run.
+        $app['config']->set('error-monitor.apache_access_log_path', __DIR__.'/Fixtures/no-logs/access.log');
     }
 
     protected function defineDatabaseMigrations(): void

@@ -46,6 +46,12 @@ All environment variables use the `ERROR_MONITOR_` prefix.
 | `laravel_log_levels` | `ERROR_MONITOR_LARAVEL_LOG_LEVELS` | `ERROR,CRITICAL,ALERT,EMERGENCY` | Monolog levels read as failures. The HTTP status, not the level, decides what is stored. |
 | `laravel_log_max_files` | `ERROR_MONITOR_LARAVEL_LOG_MAX_FILES` | `31` | Newest files analyzed per run; `0` means no limit. |
 | `laravel_log_max_bytes` | `ERROR_MONITOR_LARAVEL_LOG_MAX_BYTES` | `536870912` | Larger files are skipped; `0` means no limit. |
+| `apache_access_log_path` | `ERROR_MONITOR_APACHE_ACCESS_LOG_PATH` | `/var/log/apache2` | Where the Apache access logs live. Directory or any file inside it. |
+| `apache_access_log_patterns` | `ERROR_MONITOR_APACHE_ACCESS_LOG_PATTERNS` | `access.log,access_log,access.log.*,…` | File patterns, including the rotated and `.gz` generations. |
+| `apache_access_status_codes` | `ERROR_MONITOR_APACHE_ACCESS_STATUS_CODES` | `500-599` | Which statuses become events. Ranges and single codes, e.g. `500-599` or `500,502,503`. |
+| `apache_access_patterns` | – | `[]` | Extra regexes with named groups for a custom `LogFormat`, tried before the built-in formats. |
+| `correlation.enabled` | `ERROR_MONITOR_CORRELATION_ENABLED` | `true` | Whether Apache 5xx are matched to Laravel exceptions. |
+| `correlation.window_seconds` | `ERROR_MONITOR_CORRELATION_WINDOW_SECONDS` | `5` | How far apart the two entries may be. Both logs describe the same request, so this is seconds — not the much wider `analysis.context_*_seconds`. |
 | `results_path` | `ERROR_MONITOR_RESULTS_PATH` | `storage/app/error-monitor` | Where collected material may be kept. |
 | `retention_days` | `ERROR_MONITOR_RETENTION_DAYS` | `90` | How long aggregates are kept. |
 | `status_codes` | `ERROR_MONITOR_STATUS_CODES` | `500` | Statuses worth storing. |
@@ -114,6 +120,49 @@ files, digests and long random values - and deliberately keeps the values that
 identify a failure: HTTP statuses, PHP error constants, SQLSTATE and driver error
 codes, line numbers, version numbers, amounts and quantities.
 
+## Apache access logs
+
+The access log sees what the application log cannot: a 502 or a 503 never
+reaches PHP and therefore leaves no Laravel entry at all. Common and Combined
+Log Format are read out of the box, rotated `.gz` generations are streamed
+without ever being expanded onto disk, and a custom `LogFormat` is supported by
+adding a regex with named groups to `apache_access_patterns` — name them `time`,
+`request` and `status`, optionally `client`, `bytes`, `referer`, `agent`,
+`request_id` and `request_time`.
+
+The status here is reported by the server, never inferred, so events carry
+`metadata.status_source = access_log` and `status_estimated = false`.
+
+Query strings are cut from the path in the parser itself rather than left to the
+masker, because a token in a URL is routine in an access log. The client address
+goes through the normal masking, so no raw IP is stored.
+
+### Correlating with Laravel
+
+Each 5xx is matched against the Laravel exceptions of the same moment, strongest
+signal first. The result is recorded, because a match is a judgement rather than
+a fact:
+
+| `correlation_method` | Matched on | `correlation_confidence` |
+| --- | --- | --- |
+| `request_id` | A request id present on both sides | `1.0` |
+| `time_method_path` | Same moment, HTTP method and normalized path | `0.8` |
+| `time_path` | Same moment and normalized path | `0.6` |
+| `time` | Proximity in time alone | `0.3` |
+| `none` | Nothing matched | `0.0` |
+
+Paths are compared after normalization, so `/orders/12` and `/orders/99` are the
+same route. When several candidates are equally plausible the nearest in time is
+chosen and the confidence is divided by the number of candidates, with
+`correlation_candidates` recording how many there were.
+
+**A 5xx without a Laravel counterpart is never dropped.** It is stored as its own
+event with `correlation_method: none` — those are precisely the failures that
+never reached the application.
+
+Note that `status_codes` still decides what is persisted. It defaults to `500`,
+so set `ERROR_MONITOR_STATUS_CODES=500,502,503,504` to keep gateway errors.
+
 ## Fingerprints
 
 SHA-256 over environment, source, exception class, normalized message, the first
@@ -154,6 +203,7 @@ Implemented:
 - immutable event, stack-frame, log-file, analysis-result and analysis-window DTOs;
 - contracts for collectors, parsers, normalizers, fingerprints, masking, persistence and issue publishing;
 - the Laravel log driver: file discovery for the `single` and `daily` channels, and a streaming parser for the Monolog default format including multi-line stack traces and the JSON context;
+- the Apache access log driver: Common and Combined Log Format, rotated and gzip generations, configurable status range and custom `LogFormat` patterns, plus correlation with Laravel exceptions and a recorded confidence;
 - masking of personal data and credentials, including arrays and sensitive keys;
 - conservative normalization of dynamic values;
 - deterministic SHA-256 fingerprints with configurable materials;
@@ -171,7 +221,7 @@ status is never mistaken for a reported one.
 
 ## Explicitly out of scope
 
-Apache access/error-log parsing, GitHub API calls and issue creation, duplicate
+Apache **error**-log parsing, GitHub API calls and issue creation, duplicate
 issue handling, AI agent API calls, and XServer-specific log handling are
 reserved for a later phase.
 
