@@ -272,16 +272,16 @@ final class IssueAgentDecisionTest extends TestCase
         $this->assertSame(IssueAgentDecision::MODE_REVIEW_REQUIRED, $decision->mode());
     }
 
-    public function test_a_high_risk_plan_comment_is_never_implemented(): void
+    public function test_a_high_risk_subject_in_an_agent_plan_comment_does_not_change_the_issue_risk(): void
     {
         $decision = $this->decision(
             body: "## 概要\n\nUpdate the example.",
-            labels: [IssueAgentDecision::LABEL_TRIGGER, IssueAgentDecision::LABEL_APPROVED],
-            comments: [$this->planBody()."\n\n認証処理も変更する"],
+            labels: [IssueAgentDecision::LABEL_TRIGGER],
+            comments: [$this->planBody()."\n\nマイグレーション後のコマンドも確認する"],
         );
 
-        $this->assertSame(IssueAgentDecision::MODE_REVIEW_REQUIRED, $decision->mode());
-        $this->assertContains('authentication', $decision->highRiskCategories());
+        $this->assertSame([], $decision->highRiskCategories());
+        $this->assertSame(IssueAgentDecision::MODE_PLAN, $decision->mode());
     }
 
     public function test_unrelated_comments_do_not_change_the_risk_decision(): void

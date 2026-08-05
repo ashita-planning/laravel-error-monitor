@@ -172,18 +172,34 @@ jobs:
 
     steps:
       - name: Label and explain
+        uses: actions/github-script@v7
         env:
-          GH_TOKEN: ${{ github.token }}
-          ISSUE: ${{ github.event.issue.number }}
           CATEGORIES: ${{ needs.decide.outputs.high_risk }}
-        run: |
-          gh issue edit "$ISSUE" --add-label 'plan-review-required' || true
-          gh issue comment "$ISSUE" --body "This issue touches an area that is never implemented automatically: \`$CATEGORIES\`.
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const categories = process.env.CATEGORIES ?? '';
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
 
-          A wrong change here is worse than no change, so the agent stops before
-          implementing and a person decides what happens next. Removing the
-          \`plan-review-required\` label does not lift this: the check is on the
-          subject of the issue, not on the label." 
+            await github.rest.issues.addLabels({
+              owner,
+              repo,
+              issue_number,
+              labels: ['plan-review-required'],
+            });
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number,
+              body: `This issue touches an area that is never implemented automatically: \`${categories}\`.
+
+            A wrong change here is worse than no change, so the agent stops before
+            implementing and a person decides what happens next. Removing the
+            \`plan-review-required\` label does not lift this: the check is on the
+            subject of the issue, not on the label.`,
+            });
 
   implement:
     name: Implement the approved plan

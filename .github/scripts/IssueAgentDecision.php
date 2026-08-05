@@ -157,8 +157,12 @@ final class IssueAgentDecision
      */
     public function highRiskCategories(): array
     {
-        $planComments = array_values(array_filter($this->comments, $this->documentHasPlan(...)));
-        $haystack = mb_strtolower(implode("\n", [$this->title, $this->body, ...$planComments]));
+        // Comments can supply a plan for approval, but they do not define the
+        // subject of an issue. In particular, an agent-generated plan may
+        // mention migrations or security while describing its test coverage.
+        // Re-reading that comment on a duplicate event must not turn an
+        // otherwise ordinary issue into a high-risk one.
+        $haystack = mb_strtolower(implode("\n", [$this->title, $this->body]));
         $found = [];
 
         foreach (self::HIGH_RISK as $category => $needles) {

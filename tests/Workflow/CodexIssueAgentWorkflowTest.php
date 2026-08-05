@@ -58,6 +58,23 @@ final class CodexIssueAgentWorkflowTest extends TestCase
         $this->assertLessThan($post, $verify);
     }
 
+    public function test_the_review_required_job_does_not_need_a_checkout(): void
+    {
+        $reviewRequired = strpos($this->workflow, 'review-required:');
+        $implement = strpos($this->workflow, '  implement:');
+
+        $this->assertIsInt($reviewRequired);
+        $this->assertIsInt($implement);
+
+        $job = substr($this->workflow, $reviewRequired, $implement - $reviewRequired);
+
+        $this->assertStringNotContainsString('actions/checkout', $job);
+        $this->assertStringNotContainsString('gh issue ', $job);
+        $this->assertStringContainsString('uses: actions/github-script@v7', $job);
+        $this->assertStringContainsString('github.rest.issues.addLabels', $job);
+        $this->assertStringContainsString('github.rest.issues.createComment', $job);
+    }
+
     public function test_the_workflow_checks_then_commits_then_pushes_then_opens_a_draft(): void
     {
         $verify = strpos($this->workflow, '- name: Verify the branch before pushing');
