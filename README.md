@@ -490,6 +490,9 @@ repository — so the gates are on the actor and the subject, not on the text:
 - Only `OWNER`, `MEMBER` and `COLLABORATOR` issues are acted on at all.
 - Issue text is fetched as JSON and reaches Codex only through a prompt file;
   it is never interpolated into a shell command or workflow expression.
+- Only adding `ai-fix` or `plan-approved` may start agent work. Status labels
+  added by the workflow itself are ignored, so they cannot cause another API
+  run.
 - The planning job may not modify a single file; the job fails if the working
   tree is dirty when it finishes, and only then posts the plan.
 - Implementation requires a plan **and** `plan-approved`. A plan alone is not

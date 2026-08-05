@@ -79,6 +79,55 @@ final class IssueAgentDecisionTest extends TestCase
         $this->assertSame(IssueAgentDecision::MODE_NONE, $decision->mode());
     }
 
+    #[DataProvider('nonTriggeringLabels')]
+    public function test_status_and_unrelated_labels_do_not_restart_agent_work(string $label): void
+    {
+        $decision = $this->decision(
+            body: $this->planBody(),
+            labels: [IssueAgentDecision::LABEL_TRIGGER, IssueAgentDecision::LABEL_APPROVED, $label],
+            eventAction: 'labeled',
+            eventLabel: $label,
+        );
+
+        $this->assertFalse($decision->eventCanTrigger());
+        $this->assertSame(IssueAgentDecision::MODE_NONE, $decision->mode());
+        $this->assertSame('This event does not start agent work.', $decision->reason());
+    }
+
+    /** @return array<string, array{0: string}> */
+    public static function nonTriggeringLabels(): array
+    {
+        return [
+            'running' => ['ai-running'],
+            'done' => ['ai-done'],
+            'failed' => ['ai-failed'],
+            'review required' => ['plan-review-required'],
+            'unrelated label' => ['documentation'],
+        ];
+    }
+
+    #[DataProvider('triggeringLabels')]
+    public function test_only_human_workflow_labels_can_trigger_a_labeled_event(string $label): void
+    {
+        $decision = $this->decision(
+            body: $this->planBody(),
+            labels: [IssueAgentDecision::LABEL_TRIGGER, $label],
+            eventAction: 'labeled',
+            eventLabel: strtoupper($label),
+        );
+
+        $this->assertTrue($decision->eventCanTrigger());
+    }
+
+    /** @return array<string, array{0: string}> */
+    public static function triggeringLabels(): array
+    {
+        return [
+            'agent requested' => ['ai-fix'],
+            'plan approved' => ['plan-approved'],
+        ];
+    }
+
     public function test_an_issue_without_a_plan_gets_a_plan(): void
     {
         $decision = $this->decision(
@@ -280,8 +329,10 @@ final class IssueAgentDecisionTest extends TestCase
         array $labels = [IssueAgentDecision::LABEL_TRIGGER],
         string $association = 'OWNER',
         array $comments = [],
+        string $eventAction = 'opened',
+        ?string $eventLabel = null,
     ): IssueAgentDecision {
-        return new IssueAgentDecision($title, $body, $labels, $association, $comments);
+        return new IssueAgentDecision($title, $body, $labels, $association, $comments, $eventAction, $eventLabel);
     }
 
     private function planBody(): string

@@ -86,7 +86,29 @@ final class IssueAgentDecision
         private readonly array $labels,
         private readonly string $authorAssociation,
         private readonly array $comments = [],
+        private readonly string $eventAction = 'opened',
+        private readonly ?string $eventLabel = null,
     ) {}
+
+    /**
+     * Only human workflow labels may start agent work.
+     *
+     * The workflow adds status labels of its own. Those additions emit another
+     * `issues.labeled` event, so accepting every label event would run the
+     * agent again and spend API credit for work it had already started.
+     */
+    public function eventCanTrigger(): bool
+    {
+        if ($this->eventAction === 'opened') {
+            return true;
+        }
+
+        if ($this->eventAction !== 'labeled' || $this->eventLabel === null) {
+            return false;
+        }
+
+        return in_array(strtolower(trim($this->eventLabel)), [self::LABEL_TRIGGER, self::LABEL_APPROVED], true);
+    }
 
     /**
      * Whether the actor is trusted enough for the agent to run at all.
@@ -167,7 +189,7 @@ final class IssueAgentDecision
      */
     public function mode(): string
     {
-        if (! $this->actorIsTrusted() || ! $this->hasTriggerLabel()) {
+        if (! $this->eventCanTrigger() || ! $this->actorIsTrusted() || ! $this->hasTriggerLabel()) {
             return self::MODE_NONE;
         }
 
@@ -186,9 +208,7 @@ final class IssueAgentDecision
     public function reason(): string
     {
         return match ($this->mode()) {
-            self::MODE_NONE => $this->actorIsTrusted()
-                ? sprintf('The issue does not carry the `%s` label.', self::LABEL_TRIGGER)
-                : 'The issue was raised by somebody without write access to this repository.',
+            self::MODE_NONE => $this->noneReason(),
             self::MODE_REVIEW_REQUIRED => sprintf(
                 'This issue touches %s, which is never implemented automatically.',
                 implode(', ', $this->highRiskCategories()),
@@ -198,6 +218,17 @@ final class IssueAgentDecision
                 ? sprintf('The plan is present but not yet approved with `%s`.', self::LABEL_APPROVED)
                 : 'The issue has no implementation plan yet.',
         };
+    }
+
+    private function noneReason(): string
+    {
+        if (! $this->eventCanTrigger()) {
+            return 'This event does not start agent work.';
+        }
+
+        return $this->actorIsTrusted()
+            ? sprintf('The issue does not carry the `%s` label.', self::LABEL_TRIGGER)
+            : 'The issue was raised by somebody without write access to this repository.';
     }
 
     /** Branch an implementation is allowed to use, and no other. */
