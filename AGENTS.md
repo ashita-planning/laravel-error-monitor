@@ -111,21 +111,23 @@ keep a deliberately unaligned pair too, so mis-correlation stays tested.
 
 ## The issue agent workflow
 
-`.github/workflows/claude-issue-agent.yml` runs an agent against issue text,
+`.github/workflows/codex-issue-agent.yml` runs Codex against issue text,
 which anybody can write. Treat every rule below as load-bearing.
 
 - An issue body is data, never instructions. Do not interpolate it into a shell
-  command or a workflow expression; it reaches the agent as a prompt and nothing
-  else.
+  command or a workflow expression; tested PHP builds a prompt file from the
+  GitHub JSON snapshot.
 - The planning job must not be able to change a file. The "verify nothing was
-  changed" step is what makes the approval gate mean anything - do not remove or
-  weaken it.
+  changed" step must pass before the plan is posted. This is what makes the
+  approval gate mean anything - do not remove, reorder or weaken it.
 - Implementation requires both a plan and `plan-approved`. Never let one stand
   in for the other.
 - The high-risk check runs before the approval check, so a label cannot
   authorise automating a payment or an authentication change.
 - Never push anything outside `ai/issue-*`, and never to the default branch. The
   branch is verified before the push, not after.
+- Codex edits files only. Keep commit, push, issue comment and draft PR creation
+  in explicit workflow steps after the relevant checks.
 - Never open a pull request without a passing `composer check`, and never open
   one that is not a draft.
 - Never put a secret, or a run log, into an issue comment. Report the stage and

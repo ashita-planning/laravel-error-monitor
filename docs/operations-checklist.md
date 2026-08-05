@@ -29,9 +29,10 @@
 
 ## The issue agent, if used
 
-- [ ] The Claude GitHub App is installed
-- [ ] `ANTHROPIC_API_KEY` is set
-- [ ] The smoke test in [claude-code-workflow.md](claude-code-workflow.md) has
+- [ ] `OPENAI_API_KEY` is set as a repository Actions secret
+- [ ] The six issue-agent labels in
+      [codex-issue-workflow.md](codex-issue-workflow.md) exist
+- [ ] The smoke test in [codex-issue-workflow.md](codex-issue-workflow.md) has
       been done once — in particular that a planning run changes no files
 
 ## Monthly

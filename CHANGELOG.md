@@ -140,17 +140,22 @@ project adheres to [Semantic Versioning](https://semver.org/).
   every file based collector now extends.
 - Tests covering the above, `CHANGELOG.md` and `CLAUDE.md`.
 
-- `.github/workflows/claude-issue-agent.yml`: an issue labelled `ai-fix` is
-  investigated and answered with a plan; a plan that a person has approved with
-  `plan-approved` is implemented on `ai/issue-{number}` and opened as a draft
-  pull request once `composer check` passes. Concurrency is per issue, and
-  duplicate plan and implementation comments are prevented by HTML markers.
+- `.github/workflows/codex-issue-agent.yml`: the official
+  `openai/codex-action@v1` investigates an issue labelled `ai-fix` under the
+  `:read-only` permission profile; a plan that a person has approved with
+  `plan-approved` is implemented under `:workspace` on `ai/issue-{number}` and
+  opened as a draft pull request once `composer check` passes. The workflow,
+  rather than Codex, owns comments, commits, pushes and PR creation. Concurrency
+  is per issue, and duplicate plan and implementation comments are prevented by
+  HTML markers.
 - `.github/scripts/IssueAgentDecision.php`: the decision the workflow acts on -
-  trusted actor, plan present, plan approved, subject safe to automate - unit
-  tested because a YAML `if:` expression cannot be. Authentication, payments,
-  loyalty, production data, deletion, migrations, security, undocumented
-  external APIs, non-reproducible failures and major dependency upgrades stop at
-  a plan whatever labels are applied.
+  trusted actor, plan present in the body or a comment, plan approved, subject
+  safe to automate - unit tested because a YAML `if:` expression cannot be.
+  `IssueAgentPromptBuilder` serializes the untrusted issue snapshot into a
+  prompt file without shell or workflow-expression interpolation.
+  Authentication, payments, loyalty, production data, deletion, migrations,
+  security, undocumented external APIs, non-reproducible failures and major
+  dependency upgrades stop at a plan whatever labels are applied.
 - `.github/ISSUE_TEMPLATE/ai-task.yml`, and `/.github` added to the
   `export-ignore` rules so CI tooling stays out of the distributed package.
 

@@ -78,12 +78,14 @@ final class IssueAgentDecision
 
     /**
      * @param  array<int, string>  $labels
+     * @param  array<int, string>  $comments
      */
     public function __construct(
         private readonly string $title,
         private readonly string $body,
         private readonly array $labels,
         private readonly string $authorAssociation,
+        private readonly array $comments = [],
     ) {}
 
     /**
@@ -117,15 +119,13 @@ final class IssueAgentDecision
      */
     public function hasPlan(): bool
     {
-        if (preg_match(self::PLAN_HEADING, $this->body) !== 1) {
-            return false;
+        foreach ($this->planDocuments() as $document) {
+            if ($this->documentHasPlan($document)) {
+                return true;
+            }
         }
 
-        if (preg_match(self::STEP, $this->planSection()) !== 1) {
-            return false;
-        }
-
-        return preg_match(self::COMPLETION_HEADING, $this->body) === 1;
+        return false;
     }
 
     /**
@@ -135,7 +135,8 @@ final class IssueAgentDecision
      */
     public function highRiskCategories(): array
     {
-        $haystack = mb_strtolower($this->title."\n".$this->body);
+        $planComments = array_values(array_filter($this->comments, $this->documentHasPlan(...)));
+        $haystack = mb_strtolower(implode("\n", [$this->title, $this->body, ...$planComments]));
         $found = [];
 
         foreach (self::HIGH_RISK as $category => $needles) {
@@ -233,10 +234,29 @@ final class IssueAgentDecision
         return false;
     }
 
-    /** The text under the plan heading, up to the next heading. */
-    private function planSection(): string
+    /** @return array<int, string> */
+    private function planDocuments(): array
     {
-        if (preg_match('/^#{1,3}\s*(?:実装プラン|実装計画|implementation plan)\s*$(?P<body>.*?)(?=^#{1,3}\s|\z)/musi', $this->body, $matches) !== 1) {
+        return [$this->body, ...$this->comments];
+    }
+
+    private function documentHasPlan(string $document): bool
+    {
+        if (preg_match(self::PLAN_HEADING, $document) !== 1) {
+            return false;
+        }
+
+        if (preg_match(self::STEP, $this->planSection($document)) !== 1) {
+            return false;
+        }
+
+        return preg_match(self::COMPLETION_HEADING, $document) === 1;
+    }
+
+    /** The text under the plan heading, up to the next heading. */
+    private function planSection(string $document): string
+    {
+        if (preg_match('/^#{1,3}\s*(?:実装プラン|実装計画|implementation plan)\s*$(?P<body>.*?)(?=^#{1,3}\s|\z)/musi', $document, $matches) !== 1) {
             return '';
         }
 
