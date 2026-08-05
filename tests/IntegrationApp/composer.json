@@ -5,7 +5,7 @@
   "type": "project",
   "require": {
     "php": "^8.2",
-    "ashita-planning/laravel-error-monitor": "dev-main",
+    "ashita-planning/laravel-error-monitor": "dev-main as 1.99.0",
     "ashita-planning/laravel-error-monitor-github": "dev-main",
     "ashita-planning/laravel-error-monitor-xserver": "dev-main"
   },
@@ -17,7 +17,7 @@
     {
       "type": "path",
       "url": "../..",
-      "options": { "symlink": true, "versions": { "ashita-planning/laravel-error-monitor": "dev-main" } }
+      "options": { "symlink": true, "versions": { "ashita-planning/laravel-error-monitor": "dev-main as 1.99.0" } }
     },
     {
       "type": "path",
