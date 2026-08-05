@@ -53,6 +53,9 @@ if ($githubEventPath !== false && is_file($githubEventPath)) {
     $githubEvent = json_decode((string) file_get_contents($githubEventPath), true) ?: [];
 }
 
+/** @var array<string, mixed> $githubIssue */
+$githubIssue = is_array($githubEvent['issue'] ?? null) ? $githubEvent['issue'] : [];
+
 $eventLabel = null;
 
 if (is_array($githubEvent['label'] ?? null)) {
@@ -63,7 +66,7 @@ $decision = new IssueAgentDecision(
     title: (string) ($issue['title'] ?? ''),
     body: (string) ($issue['body'] ?? ''),
     labels: $labels,
-    authorAssociation: (string) ($issue['author_association'] ?? $issue['authorAssociation'] ?? 'NONE'),
+    authorAssociation: (string) ($issue['author_association'] ?? $githubIssue['author_association'] ?? 'NONE'),
     comments: $comments,
     eventAction: (string) ($githubEvent['action'] ?? 'opened'),
     eventLabel: $eventLabel,

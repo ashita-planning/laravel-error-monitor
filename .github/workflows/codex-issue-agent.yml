@@ -56,7 +56,7 @@ jobs:
           ISSUE: ${{ github.event.issue.number }}
         run: |
           gh issue view "$ISSUE" \
-            --json number,title,body,authorAssociation,labels,comments \
+            --json number,title,body,labels,comments \
             > "$RUNNER_TEMP/issue.json"
 
       - name: Decide
