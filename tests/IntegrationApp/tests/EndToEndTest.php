@@ -8,6 +8,8 @@ use Apkk\LaravelErrorMonitor\Models\ErrorMonitorEvent;
 use Apkk\LaravelErrorMonitor\Models\ErrorMonitorIssue;
 use Apkk\LaravelErrorMonitor\Support\LogSource;
 use Apkk\LaravelErrorMonitorGithub\Github\GithubMarkerBuilder;
+use DateTimeImmutable;
+use DateTimeZone;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -236,16 +238,34 @@ final class EndToEndTest extends TestCase
             'normalized_message' => 'Long gone',
             'payload_hash' => str_repeat('e', 64),
         ]);
+        $today = new DateTimeImmutable(
+            'now',
+            new DateTimeZone((string) config('error-monitor.timezone', 'UTC')),
+        );
+        $recent = ErrorMonitorEvent::query()->create([
+            'environment' => 'production',
+            'source' => LogSource::LARAVEL,
+            'fingerprint' => str_repeat('a', 64),
+            'detected_date' => $today->format('Y-m-d'),
+            'first_occurred_at' => $today,
+            'last_occurred_at' => $today,
+            'exception_class' => 'RuntimeException',
+            'normalized_message' => 'Still current',
+            'payload_hash' => str_repeat('b', 64),
+        ]);
 
         config()->set('error-monitor.retention_days', 1);
 
         $this->artisan('error-monitor:run', ['--date' => self::DAY])->run();
 
-        // Six years old, and the run completed cleanly, so it goes. (The other
-        // half - retention skipped while a source is failing - is pinned in the
-        // core package, where a failing source can be arranged directly.)
+        // The stale row goes and the row created for the actual current date
+        // survives. Fixture dates are intentionally fixed and must not make
+        // this assertion depend on the calendar date when CI happens to run.
+        // The other half - retention skipped while a source is failing - is
+        // pinned in the core package, where a failing source can be arranged
+        // directly.
         $this->assertFalse(ErrorMonitorEvent::query()->whereKey($stale->id)->exists());
-        $this->assertGreaterThan(0, ErrorMonitorEvent::query()->count(), 'Today survived.');
+        $this->assertTrue(ErrorMonitorEvent::query()->whereKey($recent->id)->exists(), 'Today survived.');
     }
 
     /** Everything the run wrote, in one string, for a leak check to search. */
