@@ -38,6 +38,11 @@ abstract class TestCase extends Orchestra
     /** @return array<int, class-string> */
     protected function getPackageProviders($app): array
     {
+        // The GitHub provider decides at register() time whether to bind the
+        // publisher at all, so its switch must be on before any provider
+        // registers - defineEnvironment() is too late for that.
+        $app['config']->set('error-monitor-github.enabled', true);
+
         return [
             ErrorMonitorServiceProvider::class,
             XserverLogSourceServiceProvider::class,
