@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   tests:
-    name: PHP ${{ matrix.php }} / Laravel ${{ matrix.laravel }}
+    name: PHP ${{ matrix.php }} / Laravel ${{ matrix.laravel }}${{ matrix.dependencies == 'lowest' && ' (lowest)' || '' }}
     runs-on: ubuntu-latest
 
     env:
@@ -25,8 +25,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Laravel 10 needs PHP >= 8.1, Laravel 11 and 12 need >= 8.2. The
-        # combinations the framework does not support are simply not listed.
+        # Laravel 10 needs PHP >= 8.1, Laravel 11 and 12 need >= 8.2 and
+        # Laravel 13 needs >= 8.3. The combinations the framework does not
+        # support are simply not listed.
+        #
+        # Laravel 13 is additionally pinned to its lowest resolvable releases
+        # once, because "^13.0" is a claim about 13.0, not about whatever
+        # 13.x is newest on the day the job runs.
         include:
           - { php: '8.2', laravel: '10.*', testbench: '8.*' }
           - { php: '8.2', laravel: '11.*', testbench: '9.*' }
@@ -34,8 +39,12 @@ jobs:
           - { php: '8.3', laravel: '10.*', testbench: '8.*' }
           - { php: '8.3', laravel: '11.*', testbench: '9.*' }
           - { php: '8.3', laravel: '12.*', testbench: '10.*' }
+          - { php: '8.3', laravel: '13.*', testbench: '11.*' }
+          - { php: '8.3', laravel: '13.*', testbench: '11.*', dependencies: 'lowest' }
           - { php: '8.4', laravel: '11.*', testbench: '9.*' }
           - { php: '8.4', laravel: '12.*', testbench: '10.*' }
+          - { php: '8.4', laravel: '13.*', testbench: '11.*' }
+          - { php: '8.5', laravel: '13.*', testbench: '11.*' }
 
     steps:
       - uses: actions/checkout@v4
@@ -62,7 +71,9 @@ jobs:
       # here only: it never reaches composer.json, so nothing weakens for anyone
       # installing this package. The `security` job below keeps the real gate.
       - name: Install dependencies
-        run: composer update --prefer-dist --no-interaction --no-progress
+        run: >
+          composer update --prefer-dist --no-interaction --no-progress
+          ${{ matrix.dependencies == 'lowest' && '--prefer-lowest --prefer-stable' || '' }}
         env:
           COMPOSER_NO_BLOCKING: 1
 

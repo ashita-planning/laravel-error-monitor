@@ -18,9 +18,9 @@
 ## Requirements
 
 - PHP 8.2 or newer
-- Laravel 10, 11, or 12
+- Laravel 10, 11, 12, or 13 (Laravel 13 itself requires PHP 8.3)
 
-CI verifies that the package code runs on all three major versions. That is a
+CI verifies that the package code runs on all four major versions. That is a
 statement about code compatibility, not an endorsement of any given framework
 release: Laravel 10 and 11 have published security advisories, so the
 compatibility matrix installs them with Composer's advisory blocking disabled
@@ -534,7 +534,7 @@ composer analyse      # PHPStan
 composer check        # all three
 ```
 
-CI runs the same gates on PHP 8.2/8.3/8.4 against Laravel 10/11/12, plus the
+CI runs the same gates on PHP 8.2-8.5 against Laravel 10/11/12/13, plus the
 migrations and both Artisan commands inside a Testbench application, and audits
 the current dependency set in a separate job.
 

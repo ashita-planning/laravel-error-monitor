@@ -4,6 +4,19 @@ All notable changes to `ashita-planning/laravel-error-monitor` are documented he
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Laravel 13 support: `illuminate/console`, `illuminate/database` and
+  `illuminate/support` accept `^13.0`, the development dependencies accept
+  Testbench 11 and PHPUnit 12, and the CI matrix runs Laravel 13 on
+  PHP 8.3/8.4/8.5 - once against the lowest resolvable 13.x releases, since
+  `^13.0` is a claim about 13.0, not about the newest 13.x. Laravel 13 itself
+  requires PHP 8.3; the package keeps `php: ^8.2` because Laravel 10-12 still
+  run there, and choosing 13 makes Composer enforce 8.3 through the framework.
+  No code change was needed.
+
 ## [1.0.0] - 2026-08-05
 
 ### Added
