@@ -517,6 +517,9 @@ The workflow needs one repository secret an administrator has to provide:
 
 1. An OpenAI API key stored as the `OPENAI_API_KEY` repository Actions secret.
 
+The OpenAI Project for that key must allow `gpt-5.6-terra`. Both workflow jobs
+are fixed to that model with `medium` reasoning effort.
+
 The key is separate from a ChatGPT subscription. No Claude GitHub App or
 Anthropic key is used, and the workflow does nothing without `OPENAI_API_KEY`.
 
