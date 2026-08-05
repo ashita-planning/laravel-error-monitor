@@ -39,6 +39,12 @@ final class CodexIssueAgentWorkflowTest extends TestCase
         $this->assertStringNotContainsString('${{ github.event.issue.title }}', $this->workflow);
     }
 
+    public function test_the_issue_snapshot_uses_fields_supported_by_gh_cli(): void
+    {
+        $this->assertStringContainsString('--json number,title,body,labels,comments', $this->workflow);
+        $this->assertStringNotContainsString('authorAssociation', $this->workflow);
+    }
+
     public function test_a_plan_is_checked_before_it_is_posted(): void
     {
         $codex = strpos($this->workflow, '- name: Investigate and propose');
