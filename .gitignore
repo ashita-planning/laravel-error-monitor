@@ -8,7 +8,11 @@
 .DS_Store
 /.env
 *.log
+/xdebug-*/
+/package.xml
 
 # Synthetic log fixtures are part of the test suite and must ship.
 !/tests/Fixtures/*.log
 !/tests/IntegrationApp/fixtures/storage/logs/*.log
+/composer.phar
+/HANDOFF.md
