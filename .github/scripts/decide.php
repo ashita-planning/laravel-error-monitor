@@ -17,17 +17,17 @@ require_once __DIR__.'/IssueAgentDecision.php';
 
 use ErrorMonitor\Workflow\IssueAgentDecision;
 
-$eventPath = getenv('GITHUB_EVENT_PATH');
+$eventPath = getenv('ISSUE_SNAPSHOT_PATH') ?: getenv('GITHUB_EVENT_PATH');
 
 if ($eventPath === false || ! is_file($eventPath)) {
     fwrite(STDERR, "No event payload was available.\n");
     exit(1);
 }
 
-/** @var array<string, mixed> $event */
-$event = json_decode((string) file_get_contents($eventPath), true) ?: [];
+/** @var array<string, mixed> $payload */
+$payload = json_decode((string) file_get_contents($eventPath), true) ?: [];
 /** @var array<string, mixed> $issue */
-$issue = is_array($event['issue'] ?? null) ? $event['issue'] : [];
+$issue = is_array($payload['issue'] ?? null) ? $payload['issue'] : $payload;
 
 /** @var array<int, array<string, mixed>|string> $rawLabels */
 $rawLabels = is_array($issue['labels'] ?? null) ? $issue['labels'] : [];
@@ -37,11 +37,36 @@ $labels = array_map(
     $rawLabels,
 );
 
+/** @var array<int, array<string, mixed>|string> $rawComments */
+$rawComments = is_array($issue['comments'] ?? null) ? $issue['comments'] : [];
+
+$comments = array_map(
+    static fn (array|string $comment): string => is_array($comment) ? (string) ($comment['body'] ?? '') : $comment,
+    $rawComments,
+);
+
+$githubEventPath = getenv('GITHUB_EVENT_PATH');
+$githubEvent = [];
+
+if ($githubEventPath !== false && is_file($githubEventPath)) {
+    /** @var array<string, mixed> $githubEvent */
+    $githubEvent = json_decode((string) file_get_contents($githubEventPath), true) ?: [];
+}
+
+$eventLabel = null;
+
+if (is_array($githubEvent['label'] ?? null)) {
+    $eventLabel = (string) ($githubEvent['label']['name'] ?? '');
+}
+
 $decision = new IssueAgentDecision(
     title: (string) ($issue['title'] ?? ''),
     body: (string) ($issue['body'] ?? ''),
     labels: $labels,
-    authorAssociation: (string) ($issue['author_association'] ?? 'NONE'),
+    authorAssociation: (string) ($issue['author_association'] ?? $issue['authorAssociation'] ?? 'NONE'),
+    comments: $comments,
+    eventAction: (string) ($githubEvent['action'] ?? 'opened'),
+    eventLabel: $eventLabel,
 );
 
 $number = (int) ($issue['number'] ?? 0);

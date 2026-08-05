@@ -10,7 +10,7 @@
 | [XServer logs](docs/xserver.md) | Paths, the file-date trap, missing files |
 | [GitHub issues](docs/github-issues.md) | Token permissions, duplicate prevention |
 | [Scheduling](docs/scheduler.md) | When to run it, exit codes, retention |
-| [The issue agent](docs/claude-code-workflow.md) | Setup and the first smoke test |
+| [The issue agent](docs/codex-issue-workflow.md) | Setup and the first smoke test |
 | [Security](docs/security.md) | What is masked, what is deliberately kept |
 | [Troubleshooting](docs/troubleshooting.md) | Symptom to cause |
 | [Operations checklist](docs/operations-checklist.md) | Before the first run, and monthly |
@@ -463,9 +463,9 @@ S3 or an SSH adapter fits the same shape.
 
 ## The issue agent
 
-`.github/workflows/claude-issue-agent.yml` turns an issue into a plan, and an
-approved plan into a draft pull request. It runs in two stages and never skips
-the first.
+`.github/workflows/codex-issue-agent.yml` runs the official Codex GitHub Action
+to turn an issue into a plan, and an approved plan into a draft pull request. It
+runs in two stages and never skips the first.
 
 ```
 issue labelled ai-fix
@@ -488,8 +488,13 @@ issue labelled ai-fix
 repository — so the gates are on the actor and the subject, not on the text:
 
 - Only `OWNER`, `MEMBER` and `COLLABORATOR` issues are acted on at all.
+- Issue text is fetched as JSON and reaches Codex only through a prompt file;
+  it is never interpolated into a shell command or workflow expression.
+- Only adding `ai-fix` or `plan-approved` may start agent work. Status labels
+  added by the workflow itself are ignored, so they cannot cause another API
+  run.
 - The planning job may not modify a single file; the job fails if the working
-  tree is dirty when it finishes.
+  tree is dirty when it finishes, and only then posts the plan.
 - Implementation requires a plan **and** `plan-approved`. A plan alone is not
   enough, and a label alone is not enough.
 - Authentication, payments, loyalty points, production data, deletions,
@@ -508,13 +513,12 @@ tested, because a YAML `if:` expression cannot be.
 
 ### Setup
 
-The workflow needs two things a repository administrator has to provide:
+The workflow needs one repository secret an administrator has to provide:
 
-1. The [Claude GitHub App](https://github.com/apps/claude) installed on the
-   repository.
-2. An `ANTHROPIC_API_KEY` repository secret.
+1. An OpenAI API key stored as the `OPENAI_API_KEY` repository Actions secret.
 
-Neither is in this repository, and the workflow does nothing without them.
+The key is separate from a ChatGPT subscription. No Claude GitHub App or
+Anthropic key is used, and the workflow does nothing without `OPENAI_API_KEY`.
 
 ## Development
 

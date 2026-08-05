@@ -79,6 +79,55 @@ final class IssueAgentDecisionTest extends TestCase
         $this->assertSame(IssueAgentDecision::MODE_NONE, $decision->mode());
     }
 
+    #[DataProvider('nonTriggeringLabels')]
+    public function test_status_and_unrelated_labels_do_not_restart_agent_work(string $label): void
+    {
+        $decision = $this->decision(
+            body: $this->planBody(),
+            labels: [IssueAgentDecision::LABEL_TRIGGER, IssueAgentDecision::LABEL_APPROVED, $label],
+            eventAction: 'labeled',
+            eventLabel: $label,
+        );
+
+        $this->assertFalse($decision->eventCanTrigger());
+        $this->assertSame(IssueAgentDecision::MODE_NONE, $decision->mode());
+        $this->assertSame('This event does not start agent work.', $decision->reason());
+    }
+
+    /** @return array<string, array{0: string}> */
+    public static function nonTriggeringLabels(): array
+    {
+        return [
+            'running' => ['ai-running'],
+            'done' => ['ai-done'],
+            'failed' => ['ai-failed'],
+            'review required' => ['plan-review-required'],
+            'unrelated label' => ['documentation'],
+        ];
+    }
+
+    #[DataProvider('triggeringLabels')]
+    public function test_only_human_workflow_labels_can_trigger_a_labeled_event(string $label): void
+    {
+        $decision = $this->decision(
+            body: $this->planBody(),
+            labels: [IssueAgentDecision::LABEL_TRIGGER, $label],
+            eventAction: 'labeled',
+            eventLabel: strtoupper($label),
+        );
+
+        $this->assertTrue($decision->eventCanTrigger());
+    }
+
+    /** @return array<string, array{0: string}> */
+    public static function triggeringLabels(): array
+    {
+        return [
+            'agent requested' => ['ai-fix'],
+            'plan approved' => ['plan-approved'],
+        ];
+    }
+
     public function test_an_issue_without_a_plan_gets_a_plan(): void
     {
         $decision = $this->decision(
@@ -107,6 +156,32 @@ final class IssueAgentDecisionTest extends TestCase
         );
 
         $this->assertSame(IssueAgentDecision::MODE_IMPLEMENT, $decision->mode());
+    }
+
+    public function test_an_approved_plan_comment_is_implemented(): void
+    {
+        $decision = $this->decision(
+            body: "## 概要\n\nThe parser drops a field.",
+            labels: [IssueAgentDecision::LABEL_TRIGGER, IssueAgentDecision::LABEL_APPROVED],
+            comments: [$this->planBody().'<!-- ai-plan:42:abc123 -->'],
+        );
+
+        $this->assertTrue($decision->hasPlan());
+        $this->assertSame(IssueAgentDecision::MODE_IMPLEMENT, $decision->mode());
+    }
+
+    public function test_separate_comments_cannot_be_combined_into_a_plan(): void
+    {
+        $decision = $this->decision(
+            labels: [IssueAgentDecision::LABEL_TRIGGER, IssueAgentDecision::LABEL_APPROVED],
+            comments: [
+                "## 実装プラン\n\n1. Change the parser\n",
+                "## 完了条件\n\n- `composer check` passes\n",
+            ],
+        );
+
+        $this->assertFalse($decision->hasPlan());
+        $this->assertSame(IssueAgentDecision::MODE_PLAN, $decision->mode());
     }
 
     public function test_a_heading_alone_is_not_a_plan(): void
@@ -197,6 +272,30 @@ final class IssueAgentDecisionTest extends TestCase
         $this->assertSame(IssueAgentDecision::MODE_REVIEW_REQUIRED, $decision->mode());
     }
 
+    public function test_a_high_risk_plan_comment_is_never_implemented(): void
+    {
+        $decision = $this->decision(
+            body: "## 概要\n\nUpdate the example.",
+            labels: [IssueAgentDecision::LABEL_TRIGGER, IssueAgentDecision::LABEL_APPROVED],
+            comments: [$this->planBody()."\n\n認証処理も変更する"],
+        );
+
+        $this->assertSame(IssueAgentDecision::MODE_REVIEW_REQUIRED, $decision->mode());
+        $this->assertContains('authentication', $decision->highRiskCategories());
+    }
+
+    public function test_unrelated_comments_do_not_change_the_risk_decision(): void
+    {
+        $decision = $this->decision(
+            body: $this->planBody(),
+            labels: [IssueAgentDecision::LABEL_TRIGGER, IssueAgentDecision::LABEL_APPROVED],
+            comments: ['This is not an authentication change.'],
+        );
+
+        $this->assertSame([], $decision->highRiskCategories());
+        $this->assertSame(IssueAgentDecision::MODE_IMPLEMENT, $decision->mode());
+    }
+
     public function test_an_implementation_may_only_use_its_own_branch(): void
     {
         $this->assertSame('ai/issue-42', $this->decision()->branch(42));
@@ -229,8 +328,11 @@ final class IssueAgentDecisionTest extends TestCase
         string $body = '',
         array $labels = [IssueAgentDecision::LABEL_TRIGGER],
         string $association = 'OWNER',
+        array $comments = [],
+        string $eventAction = 'opened',
+        ?string $eventLabel = null,
     ): IssueAgentDecision {
-        return new IssueAgentDecision($title, $body, $labels, $association);
+        return new IssueAgentDecision($title, $body, $labels, $association, $comments, $eventAction, $eventLabel);
     }
 
     private function planBody(): string

@@ -40,13 +40,14 @@ are gone **and** that the identifying values survive.
   never enters an exception.
 - The XServer adapter holds no credentials at all; it reads files already on
   disk.
-- `ANTHROPIC_API_KEY` is a repository secret used only by the workflow, never
-  by package code.
+- `OPENAI_API_KEY` is a repository secret used only by the Codex GitHub Action,
+  never by package code. The action's default `drop-sudo` safety strategy keeps
+  later agent code from reading the secret from privileged process memory.
 
 ## The issue agent
 
 An issue body is untrusted input. See
-[claude-code-workflow.md](claude-code-workflow.md) for the gates. The important
+[codex-issue-workflow.md](codex-issue-workflow.md) for the gates. The important
 ones: the actor must have write access, the planning job cannot modify a file,
 and certain subjects are never implemented automatically regardless of labels.
 
