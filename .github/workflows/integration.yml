@@ -2,9 +2,10 @@ name: Integration
 
 # The three packages together, which no single repository's tests can show.
 #
-# One representative environment rather than the full matrix: each package
-# already runs Laravel 10, 11 and 12 on its own, and what this job adds is the
-# agreement between them, not another compatibility axis.
+# Two representative environments rather than the full matrix: each package
+# already runs Laravel 10-13 on its own, and what this job adds is the
+# agreement between them, not another compatibility axis. The newest two
+# framework releases are where that agreement is most likely to shift.
 
 on:
   push:
@@ -20,8 +21,15 @@ concurrency:
 
 jobs:
   integration:
-    name: Three packages together / PHP 8.3 / Laravel 12
+    name: Three packages together / PHP 8.3 / Laravel ${{ matrix.laravel }}
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { laravel: '12.*', testbench: '10.*' }
+          - { laravel: '13.*', testbench: '11.*' }
 
     steps:
       # Siblings, because the integration app reaches the adapters through
@@ -53,6 +61,13 @@ jobs:
           php-version: '8.3'
           extensions: dom, curl, libxml, mbstring, zip, sqlite3, pdo_sqlite
           coverage: none
+
+      - name: Pin the framework version
+        working-directory: laravel-error-monitor/tests/IntegrationApp
+        run: >
+          composer require --dev --no-interaction --no-update
+          "laravel/framework:${{ matrix.laravel }}"
+          "orchestra/testbench:${{ matrix.testbench }}"
 
       - name: Install the integration application
         working-directory: laravel-error-monitor/tests/IntegrationApp

@@ -4,6 +4,15 @@ All notable changes to `ashita-planning/laravel-error-monitor` are documented he
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- The integration application accepts Testbench 11 and PHPUnit 12, and
+  `.github/workflows/integration.yml` runs the three packages together on
+  Laravel 13 as well as 12 - the newest two framework releases are where the
+  agreement between the packages is most likely to shift.
+
 ## [1.1.0] - 2026-08-05
 
 ### Added
