@@ -11,7 +11,7 @@ package that detects, masks, normalizes, fingerprints and daily-aggregates HTTP
 500 errors from Laravel and future web-server log drivers. It stays
 application-agnostic and performs no outbound HTTP call.
 
-- PHP 8.2+, Laravel 10 / 11 / 12
+- PHP 8.2+, Laravel 10 / 11 / 12 / 13
 - Package auto-discovery, PSR-4, strict types everywhere
 
 ## Where to look first

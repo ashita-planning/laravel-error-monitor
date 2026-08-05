@@ -7,7 +7,7 @@ This Laravel package supplies the foundation for safely detecting, normalizing, 
 ## Compatibility
 
 - PHP 8.2+
-- Laravel 10, 11, and 12
+- Laravel 10, 11, 12, and 13
 
 ## Directory responsibilities
 
@@ -37,8 +37,8 @@ composer format:test    # Pint, check only
 composer analyse        # PHPStan
 ```
 
-CI (`.github/workflows/ci.yml`) runs the same gates across PHP 8.2/8.3/8.4 and
-Laravel 10/11/12, then migrates and runs both Artisan commands inside a
+CI (`.github/workflows/ci.yml`) runs the same gates across PHP 8.2-8.5 and
+Laravel 10/11/12/13, then migrates and runs both Artisan commands inside a
 Testbench application. Combinations the framework does not support are left out
 of the matrix instead of being excluded afterwards.
 
