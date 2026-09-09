@@ -6,6 +6,12 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Make the error event occurrence bounds explicitly nullable `TIMESTAMP`
+  columns and migrate existing MySQL-family installations away from implicit
+  defaults so migrations run with strict `NO_ZERO_DATE` mode.
+
 ### Changed
 
 - The integration application accepts Testbench 11 and PHPUnit 12, and
