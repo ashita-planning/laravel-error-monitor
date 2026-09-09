@@ -6,6 +6,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-09-09
+
 ### Fixed
 
 - Make the error event occurrence bounds explicitly nullable `TIMESTAMP`
