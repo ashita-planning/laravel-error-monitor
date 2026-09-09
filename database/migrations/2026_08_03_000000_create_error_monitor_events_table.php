@@ -16,8 +16,8 @@ return new class extends Migration
             $table->string('source', 100);
             $table->char('fingerprint', 64);
             $table->date('detected_date');
-            $table->timestamp('first_occurred_at');
-            $table->timestamp('last_occurred_at');
+            $table->timestamp('first_occurred_at')->nullable();
+            $table->timestamp('last_occurred_at')->nullable();
             $table->unsignedInteger('occurrence_count')->default(1);
             $table->string('exception_class');
             $table->text('normalized_message');
