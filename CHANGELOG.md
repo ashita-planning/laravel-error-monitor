@@ -6,6 +6,22 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-03
+
+### Added
+
+- Add error-monitor:setup for missing host configuration and environment settings only.
+- Add read-only error-monitor:doctor checks for all three tables and timezone.
+- Add SetupFileManager with dry-run, preservation, locking and secret-free results.
+- Include the apkk-laravel-error-monitor-setup Agent skill in the package.
+
+### Documentation
+
+- Correct optional adapter dependencies, source visibility in JSON and XServer
+  scheduling coverage. Explain publication warnings despite exit code `0`.
+- Add scheduler startup, configuration-cache and package-maintenance procedures.
+- Clarify legacy core GitHub settings and the occurrence-table verification gap.
+
 ## [1.1.1] - 2026-09-09
 
 ### Fixed

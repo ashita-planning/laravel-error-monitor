@@ -18,6 +18,9 @@ half of the chain is at fault.
 | Exit code `5` | One source failed; the others were stored. The JSON names it. |
 | `No log collector is configured yet` | The package is disabled, or no driver is registered. |
 | Events stored but no issues | The GitHub adapter is off, no token, or `--skip-github`. |
+| Exit code `0` but GitHub publishing failed | Inspect JSON `warnings`; publishing failures do not change the source-based exit code. Fix access or rate limits, then re-run the same date. |
+| A source is absent from JSON | It supplied no files, is disabled, or is unregistered. Check its status command and paths; absence alone is not proof of missing registration. |
+| Configuration changes have no effect | Rebuild the host application's configuration cache with `php artisan config:cache`, if used. |
 | Everything skipped, nothing stored | `status_codes` excludes them. Apache 403/404 are excluded on purpose. |
 | A 500 with no correlation | The Laravel and Apache timestamps disagree. See below. |
 | `Several GitHub issues carry this fingerprint` | Two issues have the same marker. Close or edit one; this is deliberately not resolved automatically. |
@@ -63,3 +66,8 @@ acting on it.
 Re-running any day is safe. Occurrence history prevents double counting, and the
 core will not offer a report it has already published. `--force` deliberately
 bypasses the first of those; it does not bypass the second.
+
+A dry run never calls the publisher. For a GitHub access check, use
+`error-monitor:github-status --check-connection`; inspect warnings and issues
+after a real run to confirm publishing. See [maintenance.md](maintenance.md)
+for configuration changes and package updates.

@@ -1,7 +1,8 @@
 # Installation
 
-Three packages, installed in this order. Each is useful on its own, and each
-later one needs the one before it.
+Install the core first, then choose either or both optional adapters. Both
+adapters depend on the core; neither depends on the other. The core can run
+without either adapter.
 
 ```
 1. ashita-planning/laravel-error-monitor           analysis, aggregation, contracts
@@ -63,6 +64,16 @@ See [scheduler.md](scheduler.md).
 php artisan error-monitor:run --date=yesterday --dry-run --json
 ```
 
-The JSON reports each source separately. If a source shows `files_analyzed: 0`,
-its collector ran and found nothing — check the path. If a source is absent
-entirely, its driver is not registered.
+The JSON reports sources that supplied files separately. An absent source may
+be disabled, unregistered, or simply have no matching readable files; absence
+alone does not distinguish these cases. Compare `sources_configured` with the
+status commands and check the paths. For XServer, use
+`error-monitor:xserver-status --date=yesterday` to inspect missing files.
+
+A dry run checks collection and analysis, but does not verify GitHub publishing.
+Use `error-monitor:github-status --check-connection` to check access, then inspect
+the first approved real run's `warnings` and resulting issues.
+
+After changing configuration on a host that uses a configuration cache, rebuild
+it with `php artisan config:cache`. See [maintenance.md](maintenance.md) for
+updates and configuration changes.

@@ -17,10 +17,31 @@ run is about.
 
 Later than the logs are written, earlier than anybody starts work.
 
-On XServer the logs appear around **06:00**, so a 05:00 run would only ever see
-the previous day's files. Either schedule after 07:00, or accept that a 05:00
-run sees the day before yesterday. The adapter reads the day's file *and* the
-next morning's, so a 07:00 run covers yesterday completely.
+On XServer the logs are expected around **06:00**, so schedule after 07:00 and
+confirm the expected files are present. A 05:00 run still targets **yesterday**;
+it does not automatically switch to the day before yesterday. Without the next
+morning's files, yesterday's coverage is incomplete. The adapter reads the day's
+file *and* the next morning's to cover the requested day. If generation is late,
+re-run that date after the files appear.
+
+For XServer, use `dailyAt('07:00')` instead of the general 05:00 example. Set the
+host application's scheduler timezone deliberately; XServer's file timezone is
+configured separately by `XSERVER_LOG_TIMEZONE`.
+
+## Starting the Laravel scheduler
+
+The schedule definition alone does not start it. Configure cron for the hosting
+account, using the actual application directory and the PHP CLI binary that
+matches the application's requirements:
+
+```cron
+* * * * * cd /absolute/path/to/application && /absolute/path/to/php artisan schedule:run >> /absolute/path/to/scheduler.log 2>&1
+```
+
+Choose a writable log destination, restrict its access and configure rotation.
+Check registration with `php artisan schedule:list`. For local development,
+`php artisan schedule:work` can keep the scheduler running in a foreground
+terminal. Do not run both cron and a second scheduler worker unintentionally.
 
 ## `onOneServer()` needs a shared cache
 
@@ -46,6 +67,11 @@ issues for one failure.
 
 `4` after a fresh install usually means a path is wrong. `5` means part of the
 run is usable — the sources that succeeded were stored.
+
+Exit code `0` does not prove GitHub publishing succeeded or every expected
+XServer file existed. Publication failures are reported in `warnings`, and
+missing XServer files are skipped. Monitor JSON `warnings` as well as the exit
+code, and check expected files with `error-monitor:xserver-status`.
 
 ## Options worth knowing
 

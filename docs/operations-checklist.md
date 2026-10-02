@@ -2,7 +2,9 @@
 
 ## Before the first scheduled run
 
-- [ ] `php artisan migrate` has run; `error-monitor:status` shows both tables
+- [ ] `php artisan migrate` has run; all package migrations are applied
+      (`php artisan migrate:status`). `error-monitor:status` checks the events
+      and issues tables, but does not check the occurrence table
 - [ ] `error-monitor:status` shows the log path exists and files are found
 - [ ] `ERROR_MONITOR_TIMEZONE` matches the server's actual timezone
       (a mismatch silently stops correlation working)
@@ -11,6 +13,10 @@
       (`500,502,503,504` — the default is `500` alone)
 - [ ] `retention_days` is what you want; it deletes
 - [ ] The cache store can lock across every machine that runs the schedule
+- [ ] `php artisan schedule:list` shows the command and cron starts Laravel's
+      scheduler using the intended PHP CLI binary
+- [ ] Configuration cache was rebuilt after configuration or `.env` changes
+      if the application uses it
 
 ## XServer, if used
 
@@ -38,6 +44,10 @@
 ## Monthly
 
 - [ ] Exit codes from the scheduled runs are `0` (`5` means a source is failing)
+- [ ] Run output / JSON `warnings` contains no unresolved publication failure;
+      GitHub failures can accompany exit code `0`
+- [ ] Expected XServer files are present, if used; missing files may be skipped
+      without a failing exit code
 - [ ] `error-monitor:status` still finds log files — rotation and path changes
       are the usual cause of silent gaps
 - [ ] Open issues labelled `plan-review-required` have been looked at

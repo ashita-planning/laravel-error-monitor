@@ -7,6 +7,7 @@
 | | |
 | --- | --- |
 | [Installation](docs/installation.md) | The three packages, in order |
+| [Guided setup](docs/setup.md) | Setup commands, doctor and AI Agent assistance |
 | [XServer logs](docs/xserver.md) | Paths, the file-date trap, missing files |
 | [GitHub issues](docs/github-issues.md) | Token permissions, duplicate prevention |
 | [Scheduling](docs/scheduler.md) | When to run it, exit codes, retention |
@@ -14,6 +15,7 @@
 | [Security](docs/security.md) | What is masked, what is deliberately kept |
 | [Troubleshooting](docs/troubleshooting.md) | Symptom to cause |
 | [Operations checklist](docs/operations-checklist.md) | Before the first run, and monthly |
+| [Maintenance](docs/maintenance.md) | Configuration cache, package updates and recovery |
 
 ## Requirements
 
@@ -76,7 +78,7 @@ All environment variables use the `ERROR_MONITOR_` prefix.
 | `masking.*` | `ERROR_MONITOR_MASKING_*` | enabled | Replacement tokens, masked keys, removed headers, query string removal, extra patterns, length bound. |
 | `fingerprint.application_paths` / `vendor_paths` | `ERROR_MONITOR_APPLICATION_PATHS` / `ERROR_MONITOR_VENDOR_PATHS` | `app/,routes/,modules/,packages/` / `vendor/,node_modules/` | Path fragments deciding which stack frames are yours. A vendor fragment always wins. |
 | `fingerprint.*` | `ERROR_MONITOR_FINGERPRINT_*` | all included | Stack frame limit, and whether the line number, HTTP method and route take part in the identity. |
-| `github.*` | `ERROR_MONITOR_GITHUB_*` | disabled | Reserved for the future issue integration. Never read by any HTTP call today. |
+| `github.*` | `ERROR_MONITOR_GITHUB_*` | disabled | Legacy reserved settings in the core. Actual publishing uses the optional GitHub adapter's `error-monitor-github.php`; use its status command to inspect the integration. |
 
 Keep defaults in the config file - the code never hardcodes them.
 
@@ -132,6 +134,15 @@ Schedule::command('error-monitor:run')
 `onOneServer()` needs a shared cache store. Even without it the command takes
 its own cache lock per period, and the database unique constraint remains the
 real safety net.
+
+The host must start Laravel's scheduler, normally through cron. For XServer,
+use a time after log generation, such as 07:00, and verify file availability.
+See [scheduler.md](docs/scheduler.md) for cron setup and coverage checks.
+
+Exit code `0` reports source processing success, but publication failures may
+still appear in JSON `warnings`. A dry run does not verify publishing.
+`error-monitor:status` reads the core's legacy GitHub settings; use
+`error-monitor:github-status` for the installed adapter's actual configuration.
 
 `error-monitor:analyze` stays available for analysing an arbitrary period:
 

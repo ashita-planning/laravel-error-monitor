@@ -9,7 +9,9 @@ use Apkk\LaravelErrorMonitor\Collectors\ApacheErrorLogCollector;
 use Apkk\LaravelErrorMonitor\Collectors\LaravelLogCollector;
 use Apkk\LaravelErrorMonitor\Collectors\ServerLogSourceCollector;
 use Apkk\LaravelErrorMonitor\Commands\AnalyzeErrorMonitorCommand;
+use Apkk\LaravelErrorMonitor\Commands\DoctorErrorMonitorCommand;
 use Apkk\LaravelErrorMonitor\Commands\RunErrorMonitorCommand;
+use Apkk\LaravelErrorMonitor\Commands\SetupErrorMonitorCommand;
 use Apkk\LaravelErrorMonitor\Commands\StatusErrorMonitorCommand;
 use Apkk\LaravelErrorMonitor\Contracts\ErrorEventRepository;
 use Apkk\LaravelErrorMonitor\Contracts\FingerprintGenerator;
@@ -135,6 +137,8 @@ final class ErrorMonitorServiceProvider extends ServiceProvider
                 AnalyzeErrorMonitorCommand::class,
                 RunErrorMonitorCommand::class,
                 StatusErrorMonitorCommand::class,
+                SetupErrorMonitorCommand::class,
+                DoctorErrorMonitorCommand::class,
             ]);
         }
     }
